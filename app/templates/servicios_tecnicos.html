@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-tools"></i> Servicios Técnicos</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_products') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarServicio">
+            <i class="fas fa-plus"></i> Nuevo Servicio
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Técnico</th>
+                        <th>Costo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for servicio in servicios.items %}
+                    <tr>
+                        <td>{{ servicio.fecha_recepcion.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ servicio.cliente_nombre }}</td>
+                        <td>{{ servicio.tipo|title }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if servicio.estado == 'pendiente' %}bg-warning
+                                {% elif servicio.estado == 'en_proceso' %}bg-info
+                                {% else %}bg-success{% endif %}">
+                                {{ servicio.estado|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                        <td>{{ servicio.tecnico.nombre if servicio.tecnico else 'Sin asignar' }}</td>
+                        <td>${{ "%.2f"|format(servicio.costo) if servicio.costo else '0.00' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ servicio.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarServicio({{ servicio.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-danger" onclick="eliminarServicio({{ servicio.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Servicio Técnico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Información del Cliente</h6>
+                        <p><strong>Nombre:</strong> <span id="detalle-cliente"></span></p>
+                        <p><strong>Teléfono:</strong> <span id="detalle-telefono"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Información del Servicio</h6>
+                        <p><strong>Tipo:</strong> <span id="detalle-tipo"></span></p>
+                        <p><strong>Estado:</strong> <span id="detalle-estado"></span></p>
+                        <p><strong>Fecha Recepción:</strong> <span id="detalle-fecha-recepcion"></span></p>
+                        <p><strong>Fecha Entrega Estimada:</strong> <span id="detalle-fecha-entrega"></span></p>
+                        <p><strong>Técnico Asignado:</strong> <span id="detalle-tecnico"></span></p>
+                        <p><strong>Costo:</strong> $<span id="detalle-costo"></span></p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Descripción</h6>
+                        <p id="detalle-descripcion"></p>
+                        <h6>Notas Técnicas</h6>
+                        <p id="detalle-notas"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Servicio -->
+<div class="modal fade" id="modalEditarServicio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Servicio Técnico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarServicio">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Cliente</label>
+                            <input type="text" id="editar-cliente" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" id="editar-telefono" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de Servicio</label>
+                            <select id="editar-tipo" class="form-select" required>
+                                <option value="reparacion">Reparación</option>
+                                <option value="mantenimiento">Mantenimiento</option>
+                                <option value="instalacion">Instalación</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select id="editar-estado" class="form-select" required>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="en_proceso">En Proceso</option>
+                                <option value="completado">Completado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Entrega Estimada</label>
+                            <input type="datetime-local" id="editar-fecha-entrega" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Costo</label>
+                            <input type="number" id="editar-costo" class="form-control" step="0.01">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Técnico Asignado</label>
+                            <select id="editar-tecnico" class="form-select">
+                                <option value="">Sin asignar</option>
+                                {% for tecnico in tecnicos %}
+                                <option value="{{ tecnico.id }}">{{ tecnico.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="editar-descripcion" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Notas Técnicas</label>
+                            <textarea id="editar-notas" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_products') %}
+<!-- Modal Agregar Servicio -->
+<div class="modal fade" id="modalAgregarServicio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Servicio Técnico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('servicios.servicios_tecnicos') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Servicio</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="reparacion">Reparación</option>
+                            <option value="mantenimiento">Mantenimiento</option>
+                            <option value="instalacion">Instalación</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cliente</label>
+                        <input type="text" name="cliente_nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="cliente_telefono" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de Entrega Estimada</label>
+                        <input type="date" name="fecha_entrega" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Costo Estimado</label>
+                        <input type="number" name="costo" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Técnico</label>
+                        <select name="tecnico_id" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% for tecnico in tecnicos %}
+                            <option value="{{ tecnico.id }}">{{ tecnico.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notas Técnicas</label>
+                        <textarea name="notas_tecnicas" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/servicio_tecnico/${id}`, function(data) {
+        $('#detalle-cliente').text(data.cliente_nombre);
+        $('#detalle-telefono').text(data.cliente_telefono);
+        $('#detalle-tipo').text(data.tipo.replace('_', ' ').charAt(0).toUpperCase() + data.tipo.slice(1));
+        $('#detalle-estado').text(data.estado.replace('_', ' ').charAt(0).toUpperCase() + data.estado.slice(1));
+        $('#detalle-fecha-recepcion').text(new Date(data.fecha_recepcion).toLocaleString());
+        $('#detalle-fecha-entrega').text(data.fecha_entrega_estimada ? new Date(data.fecha_entrega_estimada).toLocaleString() : 'No especificada');
+        $('#detalle-tecnico').text(data.tecnico_nombre || 'Sin asignar');
+        $('#detalle-costo').text(data.costo ? data.costo.toFixed(2) : '0.00');
+        $('#detalle-descripcion').text(data.descripcion);
+        $('#detalle-notas').text(data.notas_tecnicas || 'Sin notas');
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarServicio(id) {
+    $.get(`/servicio_tecnico/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-cliente').val(data.cliente_nombre);
+        $('#editar-telefono').val(data.cliente_telefono);
+        $('#editar-tipo').val(data.tipo);
+        $('#editar-estado').val(data.estado);
+        $('#editar-fecha-entrega').val(data.fecha_entrega_estimada ? data.fecha_entrega_estimada.slice(0, 16) : '');
+        $('#editar-costo').val(data.costo);
+        $('#editar-descripcion').val(data.descripcion);
+        $('#editar-notas').val(data.notas_tecnicas);
+        $('#editar-tecnico').val(data.tecnico_id || '');
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarServicio'));
+        modal.show();
+    });
+}
+
+$('#formEditarServicio').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        cliente_nombre: $('#editar-cliente').val(),
+        cliente_telefono: $('#editar-telefono').val(),
+        tipo: $('#editar-tipo').val(),
+        estado: $('#editar-estado').val(),
+        fecha_entrega_estimada: $('#editar-fecha-entrega').val(),
+        costo: parseFloat($('#editar-costo').val()) || null,
+        descripcion: $('#editar-descripcion').val(),
+        notas_tecnicas: $('#editar-notas').val(),
+        tecnico_id: $('#editar-tecnico').val() || null
+    };
+    
+    $.ajax({
+        url: `/servicio_tecnico/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar el servicio: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarServicio(id) {
+    if (confirm('¿Está seguro de eliminar este servicio?')) {
+        $.ajax({
+            url: `/servicio_tecnico/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar el servicio: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

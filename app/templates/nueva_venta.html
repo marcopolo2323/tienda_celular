@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-shopping-cart"></i> Nueva Venta</h2>
+    </div>
+</div>
+
+<form action="{{ url_for('ventas.nueva_venta') }}" method="POST" id="formVenta">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Productos</h5>
+                </div>
+    <div class="card-body">
+                    <div id="productos-container">
+                        <!-- Los productos se agregarán aquí dinámicamente -->
+                    </div>
+                    <button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+                        <i class="fas fa-plus"></i> Agregar Producto
+                    </button>
+                </div>
+                </div>
+            </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Información de Venta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cliente</label>
+                        <input type="text" name="cliente_nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="cliente_telefono" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="cliente_email" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Método de Pago</label>
+                        <select name="metodo_pago" class="form-select" required>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                </div>
+                    <hr>
+                    <div class="mb-3">
+                        <h5>Total: $<span id="total">0.00</span></h5>
+            </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-check"></i> Completar Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Modal Agregar Producto -->
+<div class="modal fade" id="modalAgregarProducto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#celulares-tab">Celulares</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#accesorios-tab">Accesorios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#servicios-tab">TV Cable</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="celulares-tab">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Marca</th>
+                                        <th>Modelo</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for celular in celulares %}
+                                    <tr>
+                                        <td>{{ celular.marca.nombre }}</td>
+                                        <td>{{ celular.modelo }}</td>
+                                        <td>${{ "%.2f"|format(celular.precio) }}</td>
+                                        <td>{{ celular.stock }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary" 
+                                                    onclick="agregarProducto('celular', {{ celular.id }}, '{{ celular.marca.nombre }} {{ celular.modelo }}', {{ celular.precio }})">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="accesorios-tab">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Marca</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for accesorio in accesorios %}
+                                    <tr>
+                                        <td>{{ accesorio.nombre }}</td>
+                                        <td>{{ accesorio.marca.nombre }}</td>
+                                        <td>${{ "%.2f"|format(accesorio.precio) }}</td>
+                                        <td>{{ accesorio.stock }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary"
+                                                    onclick="agregarProducto('accesorio', {{ accesorio.id }}, '{{ accesorio.nombre }}', {{ accesorio.precio }})">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                </div>
+            </div>
+
+                    <div class="tab-pane fade" id="servicios-tab">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Plan</th>
+                                        <th>Proveedor</th>
+                                        <th>Precio Mensual</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for servicio in servicios_tv %}
+                                    <tr>
+                                        <td>{{ servicio.nombre }}</td>
+                                        <td>{{ servicio.proveedor }}</td>
+                                        <td>${{ "%.2f"|format(servicio.precio_mensual) }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary"
+                                                    onclick="agregarProducto('servicio_tv', {{ servicio.id }}, '{{ servicio.nombre }}', {{ servicio.precio_mensual }})">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let total = 0;
+let productosAgregados = [];
+
+function agregarProducto(tipo, id, nombre, precio) {
+    const container = document.getElementById('productos-container');
+    const index = productosAgregados.length;
+    
+    const productoHTML = `
+        <div class="card mb-2" id="producto-${index}">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h6 class="mb-0">${nombre}</h6>
+                        <small class="text-muted">${tipo}</small>
+                    </div>
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm" style="width: 120px;">
+                            <button type="button" class="btn btn-outline-secondary" onclick="actualizarCantidad(${index}, -1)">-</button>
+                            <input type="number" class="form-control text-center" value="1" min="1" 
+                                   onchange="actualizarCantidad(${index}, 0)" id="cantidad-${index}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="actualizarCantidad(${index}, 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        $<span id="subtotal-${index}">${precio.toFixed(2)}</span>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="eliminarProducto(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" name="productos[]" value="${id}">
+                <input type="hidden" name="tipos[]" value="${tipo}">
+                <input type="hidden" name="cantidades[]" value="1">
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', productoHTML);
+    productosAgregados.push({ tipo, id, nombre, precio, cantidad: 1 });
+    actualizarTotal();
+    
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgregarProducto'));
+    modal.hide();
+}
+
+function actualizarCantidad(index, cambio) {
+    const inputCantidad = document.getElementById(`cantidad-${index}`);
+    const cantidadActual = parseInt(inputCantidad.value);
+    const nuevaCantidad = cambio === 0 ? cantidadActual : cantidadActual + cambio;
+    
+    if (nuevaCantidad < 1) return;
+    
+    inputCantidad.value = nuevaCantidad;
+    productosAgregados[index].cantidad = nuevaCantidad;
+    
+    // Actualizar subtotal
+    const subtotalElement = document.getElementById(`subtotal-${index}`);
+    const subtotal = (productosAgregados[index].precio * nuevaCantidad).toFixed(2);
+    subtotalElement.textContent = subtotal;
+    
+    // Actualizar input hidden
+    const inputCantidadHidden = document.querySelector(`#producto-${index} input[name="cantidades[]"]`);
+    inputCantidadHidden.value = nuevaCantidad;
+    
+    actualizarTotal();
+}
+
+function eliminarProducto(index) {
+    const elemento = document.getElementById(`producto-${index}`);
+    elemento.remove();
+    productosAgregados[index] = null;
+    actualizarTotal();
+}
+
+function actualizarTotal() {
+    total = productosAgregados.reduce((sum, producto) => {
+        if (producto === null) return sum;
+        return sum + (producto.precio * producto.cantidad);
+    }, 0);
+    
+    document.getElementById('total').textContent = total.toFixed(2);
+}
+</script>
+{% endblock %} 

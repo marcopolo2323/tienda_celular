@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-list"></i> Historial de Ventas</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('ventas.nueva_venta') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nueva Venta
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Vendedor</th>
+                        <th>Total</th>
+                        <th>Método de Pago</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venta in ventas.items %}
+                    <tr>
+                        <td>{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ venta.cliente_nombre }}</td>
+                        <td>{{ venta.vendedor.nombre }}</td>
+                        <td>${{ "%.2f"|format(venta.total) }}</td>
+                        <td>{{ venta.metodo_pago|title }}</td>
+                        <td>
+                            <span class="badge {% if venta.estado == 'completada' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ venta.estado|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ venta.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if venta.estado == 'completada' %}
+                            <button class="btn btn-sm btn-danger" onclick="cancelarVenta({{ venta.id }})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles de Venta -->
+<div class="modal fade" id="modalDetallesVenta" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Información del Cliente</h6>
+                        <p class="mb-1">Nombre: <span id="cliente-nombre"></span></p>
+                        <p class="mb-1">Teléfono: <span id="cliente-telefono"></span></p>
+                        <p class="mb-1">Email: <span id="cliente-email"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Información de la Venta</h6>
+                        <p class="mb-1">Fecha: <span id="venta-fecha"></span></p>
+                        <p class="mb-1">Vendedor: <span id="venta-vendedor"></span></p>
+                        <p class="mb-1">Método de Pago: <span id="venta-metodo"></span></p>
+                        <p class="mb-1">Estado: <span id="venta-estado"></span></p>
+                    </div>
+                </div>
+                
+                <h6>Productos</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalles-productos">
+                            <!-- Los detalles se cargarán dinámicamente -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end">Total:</th>
+                                <th>$<span id="detalles-total"></span></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    fetch(`/ventas/${id}/detalles`)
+        .then(response => response.json())
+        .then(data => {
+            // Información del cliente
+            document.getElementById('cliente-nombre').textContent = data.cliente_nombre;
+            document.getElementById('cliente-telefono').textContent = data.cliente_telefono || 'No especificado';
+            document.getElementById('cliente-email').textContent = data.cliente_email || 'No especificado';
+            
+            // Información de la venta
+            document.getElementById('venta-fecha').textContent = new Date(data.fecha_venta).toLocaleString();
+            document.getElementById('venta-vendedor').textContent = data.vendedor_nombre;
+            document.getElementById('venta-metodo').textContent = data.metodo_pago;
+            document.getElementById('venta-estado').textContent = data.estado;
+            
+            // Productos
+            const tbody = document.getElementById('detalles-productos');
+            tbody.innerHTML = '';
+            
+            data.detalles.forEach(detalle => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${detalle.producto_nombre}</td>
+                    <td>${detalle.tipo_producto}</td>
+                    <td>${detalle.cantidad}</td>
+                    <td>$${detalle.precio_unitario.toFixed(2)}</td>
+                    <td>$${(detalle.cantidad * detalle.precio_unitario).toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Total
+            document.getElementById('detalles-total').textContent = data.total.toFixed(2);
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalDetallesVenta'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar los detalles de la venta');
+        });
+}
+
+function cancelarVenta(id) {
+    if (confirm('¿Está seguro de cancelar esta venta? Esta acción no se puede deshacer.')) {
+        fetch(`/ventas/${id}/cancelar`, { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error al cancelar la venta');
+                }
+            });
+    }
+}
+</script>
+{% endblock %} 

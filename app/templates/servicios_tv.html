@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-tv"></i> Servicios de TV Cable</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_products') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarServicioTV">
+            <i class="fas fa-plus"></i> Agregar Plan TV
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Proveedor</th>
+                        <th>Precio Mensual</th>
+                        <th>Canales</th>
+                        <th>Características</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for servicio in servicios %}
+                    <tr>
+                        <td>{{ servicio.nombre }}</td>
+                        <td>{{ servicio.proveedor }}</td>
+                        <td>${{ "%.2f"|format(servicio.precio_mensual) }}</td>
+                        <td>{{ servicio.canales }}</td>
+                        <td>
+                            {% if servicio.caracteristicas.hd %}<span class="badge bg-info">HD</span>{% endif %}
+                            {% if servicio.caracteristicas.internet %}<span class="badge bg-success">Internet</span>{% endif %}
+                            {% if servicio.caracteristicas.deportes %}<span class="badge bg-warning">Deportes</span>{% endif %}
+                            {% if servicio.caracteristicas.peliculas %}<span class="badge bg-danger">Películas</span>{% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ servicio.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarServicioTV({{ servicio.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarServicioTV({{ servicio.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Plan TV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nombre:</strong> <span id="detalle-nombre"></span></p>
+                        <p><strong>Proveedor:</strong> <span id="detalle-proveedor"></span></p>
+                        <p><strong>Precio Mensual:</strong> $<span id="detalle-precio"></span></p>
+                        <p><strong>Canales:</strong> <span id="detalle-canales"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Características:</strong></p>
+                        <div id="detalle-caracteristicas">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="detalle-hd" disabled>
+                                <label class="form-check-label">HD</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="detalle-internet" disabled>
+                                <label class="form-check-label">Internet</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="detalle-deportes" disabled>
+                                <label class="form-check-label">Deportes</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="detalle-peliculas" disabled>
+                                <label class="form-check-label">Películas</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <p><strong>Descripción:</strong></p>
+                        <p id="detalle-descripcion"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Servicio TV -->
+<div class="modal fade" id="modalEditarServicioTV" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Plan TV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarServicioTV">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" id="editar-nombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Proveedor</label>
+                            <input type="text" id="editar-proveedor" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Precio Mensual</label>
+                            <input type="number" id="editar-precio" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Canales</label>
+                            <input type="number" id="editar-canales" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Características</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editar-hd">
+                                <label class="form-check-label">HD</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editar-internet">
+                                <label class="form-check-label">Internet</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editar-deportes">
+                                <label class="form-check-label">Deportes</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editar-peliculas">
+                                <label class="form-check-label">Películas</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="editar-descripcion" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_products') %}
+<!-- Modal Agregar Servicio TV -->
+<div class="modal fade" id="modalAgregarServicioTV" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Plan de TV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('productos.servicios_tv') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Plan</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Proveedor</label>
+                        <input type="text" name="proveedor" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio Mensual</label>
+                        <input type="number" name="precio_mensual" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Número de Canales</label>
+                        <input type="number" name="canales" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Características</label>
+                        <div class="form-check">
+                            <input type="checkbox" name="hd" class="form-check-input" value="true">
+                            <label class="form-check-label">Canales HD</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="internet" class="form-check-input" value="true">
+                            <label class="form-check-label">Internet Incluido</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="deportes" class="form-check-input" value="true">
+                            <label class="form-check-label">Paquete Deportivo</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="peliculas" class="form-check-input" value="true">
+                            <label class="form-check-label">Paquete de Películas</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/servicio_tv/${id}`, function(data) {
+        $('#detalle-nombre').text(data.nombre);
+        $('#detalle-proveedor').text(data.proveedor);
+        $('#detalle-precio').text(data.precio_mensual.toFixed(2));
+        $('#detalle-canales').text(data.canales);
+        $('#detalle-descripcion').text(data.descripcion);
+        
+        // Características
+        $('#detalle-hd').prop('checked', data.caracteristicas.hd);
+        $('#detalle-internet').prop('checked', data.caracteristicas.internet);
+        $('#detalle-deportes').prop('checked', data.caracteristicas.deportes);
+        $('#detalle-peliculas').prop('checked', data.caracteristicas.peliculas);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarServicioTV(id) {
+    $.get(`/servicio_tv/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-nombre').val(data.nombre);
+        $('#editar-proveedor').val(data.proveedor);
+        $('#editar-precio').val(data.precio_mensual);
+        $('#editar-canales').val(data.canales);
+        $('#editar-descripcion').val(data.descripcion);
+        
+        // Características
+        $('#editar-hd').prop('checked', data.caracteristicas.hd);
+        $('#editar-internet').prop('checked', data.caracteristicas.internet);
+        $('#editar-deportes').prop('checked', data.caracteristicas.deportes);
+        $('#editar-peliculas').prop('checked', data.caracteristicas.peliculas);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarServicioTV'));
+        modal.show();
+    });
+}
+
+$('#formEditarServicioTV').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        nombre: $('#editar-nombre').val(),
+        proveedor: $('#editar-proveedor').val(),
+        precio_mensual: parseFloat($('#editar-precio').val()),
+        canales: parseInt($('#editar-canales').val()),
+        descripcion: $('#editar-descripcion').val(),
+        caracteristicas: {
+            hd: $('#editar-hd').is(':checked'),
+            internet: $('#editar-internet').is(':checked'),
+            deportes: $('#editar-deportes').is(':checked'),
+            peliculas: $('#editar-peliculas').is(':checked')
+        }
+    };
+    
+    $.ajax({
+        url: `/servicio_tv/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar el servicio: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarServicioTV(id) {
+    if (confirm('¿Está seguro de eliminar este servicio?')) {
+        $.ajax({
+            url: `/servicio_tv/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar el servicio: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

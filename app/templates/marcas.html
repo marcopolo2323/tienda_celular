@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-tags"></i> Marcas</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_employees') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMarca">
+            <i class="fas fa-plus"></i> Agregar Marca
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Productos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for marca in marcas %}
+                    <tr>
+                        <td>{{ marca.nombre }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ marca.celulares|length }} Celulares</span>
+                            <span class="badge bg-info">{{ marca.accesorios|length }} Accesorios</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ marca.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_employees') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarMarca({{ marca.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarMarca({{ marca.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de la Marca</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Información General</h6>
+                <p><strong>Nombre:</strong> <span id="detalle-nombre"></span></p>
+                
+                <h6 class="mt-4">Productos</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Celulares</h6>
+                        <ul id="lista-celulares" class="list-unstyled">
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Accesorios</h6>
+                        <ul id="lista-accesorios" class="list-unstyled">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Marca -->
+<div class="modal fade" id="modalEditarMarca" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Marca</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarMarca">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="editar-nombre" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_employees') %}
+<!-- Modal Agregar Marca -->
+<div class="modal fade" id="modalAgregarMarca" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Marca</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.marcas') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/marca/${id}`, function(data) {
+        $('#detalle-nombre').text(data.nombre);
+        
+        const listaCelulares = $('#lista-celulares');
+        const listaAccesorios = $('#lista-accesorios');
+        
+        listaCelulares.empty();
+        listaAccesorios.empty();
+        
+        data.celulares.forEach(celular => {
+            listaCelulares.append(`<li>${celular.modelo} - Stock: ${celular.stock}</li>`);
+        });
+        
+        data.accesorios.forEach(accesorio => {
+            listaAccesorios.append(`<li>${accesorio.nombre} - Stock: ${accesorio.stock}</li>`);
+        });
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarMarca(id) {
+    $.get(`/marca/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-nombre').val(data.nombre);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarMarca'));
+        modal.show();
+    });
+}
+
+$('#formEditarMarca').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        nombre: $('#editar-nombre').val()
+    };
+    
+    $.ajax({
+        url: `/marca/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar la marca: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarMarca(id) {
+    if (confirm('¿Está seguro de eliminar esta marca? Esta acción eliminará todos los productos asociados.')) {
+        $.ajax({
+            url: `/marca/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar la marca: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

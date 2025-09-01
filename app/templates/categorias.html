@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-list-ul"></i> Categorías</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_employees') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarCategoria">
+            <i class="fas fa-plus"></i> Agregar Categoría
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Accesorios</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for categoria in categorias %}
+                    <tr>
+                        <td>{{ categoria.nombre }}</td>
+                        <td>{{ categoria.descripcion or 'Sin descripción' }}</td>
+                        <td><span class="badge bg-info">{{ categoria.accesorios|length }} Accesorios</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ categoria.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_employees') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarCategoria({{ categoria.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarCategoria({{ categoria.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de la Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Información General</h6>
+                <p><strong>Nombre:</strong> <span id="detalle-nombre"></span></p>
+                <p><strong>Descripción:</strong> <span id="detalle-descripcion"></span></p>
+                
+                <h6 class="mt-4">Accesorios en esta Categoría</h6>
+                <ul id="lista-accesorios" class="list-unstyled">
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Categoría -->
+<div class="modal fade" id="modalEditarCategoria" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarCategoria">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="editar-nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea id="editar-descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_employees') %}
+<!-- Modal Agregar Categoría -->
+<div class="modal fade" id="modalAgregarCategoria" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.categorias') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/categoria/${id}`, function(data) {
+        $('#detalle-nombre').text(data.nombre);
+        $('#detalle-descripcion').text(data.descripcion || 'Sin descripción');
+        
+        const listaAccesorios = $('#lista-accesorios');
+        listaAccesorios.empty();
+        
+        data.accesorios.forEach(accesorio => {
+            listaAccesorios.append(`
+                <li>
+                    <strong>${accesorio.nombre}</strong>
+                    <br>
+                    <small class="text-muted">
+                        Marca: ${accesorio.marca} | Stock: ${accesorio.stock} | 
+                        Precio: $${accesorio.precio.toFixed(2)}
+                    </small>
+                </li>
+            `);
+        });
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarCategoria(id) {
+    $.get(`/categoria/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-nombre').val(data.nombre);
+        $('#editar-descripcion').val(data.descripcion);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarCategoria'));
+        modal.show();
+    });
+}
+
+$('#formEditarCategoria').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        nombre: $('#editar-nombre').val(),
+        descripcion: $('#editar-descripcion').val()
+    };
+    
+    $.ajax({
+        url: `/categoria/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar la categoría: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarCategoria(id) {
+    if (confirm('¿Está seguro de eliminar esta categoría? Esta acción eliminará todos los accesorios asociados.')) {
+        $.ajax({
+            url: `/categoria/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar la categoría: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

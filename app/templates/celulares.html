@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-mobile-alt"></i> Celulares</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_products') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarCelular">
+            <i class="fas fa-plus"></i> Agregar Celular
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for celular in celulares %}
+                    <tr>
+                        <td>{{ celular.marca.nombre }}</td>
+                        <td>{{ celular.modelo }}</td>
+                        <td>${{ "%.2f"|format(celular.precio) }}</td>
+                        <td>
+                            <span class="badge {% if celular.stock < 5 %}bg-danger{% else %}bg-success{% endif %}">
+                                {{ celular.stock }}
+                            </span>
+                        </td>
+                        <td>{{ celular.estado|title }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ celular.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarCelular({{ celular.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-danger" onclick="eliminarCelular({{ celular.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_products') %}
+<!-- Modal Agregar Celular -->
+<div class="modal fade" id="modalAgregarCelular" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Celular</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('productos.celulares') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Marca</label>
+                            <select name="marca_id" class="form-select" required>
+                                <option value="">Seleccione una marca</option>
+                                {% for marca in marcas %}
+                                <option value="{{ marca.id }}">{{ marca.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" name="modelo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Precio</label>
+                            <input type="number" name="precio" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Stock</label>
+                            <input type="number" name="stock" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select" required>
+                                <option value="nuevo">Nuevo</option>
+                                <option value="reacondicionado">Reacondicionado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IMEI</label>
+                            <input type="text" name="imei" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">RAM</label>
+                            <input type="text" name="ram" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Almacenamiento</label>
+                            <input type="text" name="almacenamiento" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Color</label>
+                            <input type="text" name="color" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Pantalla</label>
+                            <input type="text" name="pantalla" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Celular</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Marca:</strong> <span id="detalle-marca"></span></p>
+                        <p><strong>Modelo:</strong> <span id="detalle-modelo"></span></p>
+                        <p><strong>Precio:</strong> $<span id="detalle-precio"></span></p>
+                        <p><strong>Stock:</strong> <span id="detalle-stock"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Estado:</strong> <span id="detalle-estado"></span></p>
+                        <p><strong>IMEI:</strong> <span id="detalle-imei"></span></p>
+                        <p><strong>RAM:</strong> <span id="detalle-ram"></span></p>
+                        <p><strong>Almacenamiento:</strong> <span id="detalle-almacenamiento"></span></p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <p><strong>Descripción:</strong></p>
+                        <p id="detalle-descripcion"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Celular -->
+<div class="modal fade" id="modalEditarCelular" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Celular</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarCelular">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Marca</label>
+                            <select name="marca_id" id="editar-marca" class="form-select" required>
+                                {% for marca in marcas %}
+                                <option value="{{ marca.id }}">{{ marca.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" id="editar-modelo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Precio</label>
+                            <input type="number" id="editar-precio" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Stock</label>
+                            <input type="number" id="editar-stock" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select id="editar-estado" class="form-select" required>
+                                <option value="nuevo">Nuevo</option>
+                                <option value="reacondicionado">Reacondicionado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IMEI</label>
+                            <input type="text" id="editar-imei" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="editar-descripcion" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">RAM</label>
+                            <input type="text" id="editar-ram" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Almacenamiento</label>
+                            <input type="text" id="editar-almacenamiento" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Color</label>
+                            <input type="text" id="editar-color" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Pantalla</label>
+                            <input type="text" id="editar-pantalla" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/celular/${id}`, function(data) {
+        $('#detalle-marca').text(data.marca);
+        $('#detalle-modelo').text(data.modelo);
+        $('#detalle-precio').text(data.precio.toFixed(2));
+        $('#detalle-stock').text(data.stock);
+        $('#detalle-estado').text(data.estado);
+        $('#detalle-imei').text(data.imei);
+        $('#detalle-ram').text(data.especificaciones.ram);
+        $('#detalle-almacenamiento').text(data.especificaciones.almacenamiento);
+        $('#detalle-descripcion').text(data.descripcion);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarCelular(id) {
+    $.get(`/celular/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-marca').val(data.marca_id);
+        $('#editar-modelo').val(data.modelo);
+        $('#editar-precio').val(data.precio);
+        $('#editar-stock').val(data.stock);
+        $('#editar-estado').val(data.estado);
+        $('#editar-imei').val(data.imei);
+        $('#editar-descripcion').val(data.descripcion);
+        $('#editar-ram').val(data.especificaciones.ram);
+        $('#editar-almacenamiento').val(data.especificaciones.almacenamiento);
+        $('#editar-color').val(data.especificaciones.color);
+        $('#editar-pantalla').val(data.especificaciones.pantalla);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarCelular'));
+        modal.show();
+    });
+}
+
+$('#formEditarCelular').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        marca_id: $('#editar-marca').val(),
+        modelo: $('#editar-modelo').val(),
+        precio: parseFloat($('#editar-precio').val()),
+        stock: parseInt($('#editar-stock').val()),
+        estado: $('#editar-estado').val(),
+        imei: $('#editar-imei').val(),
+        descripcion: $('#editar-descripcion').val(),
+        especificaciones: {
+            ram: $('#editar-ram').val(),
+            almacenamiento: $('#editar-almacenamiento').val(),
+            color: $('#editar-color').val(),
+            pantalla: $('#editar-pantalla').val()
+        }
+    };
+    
+    $.ajax({
+        url: `/celular/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar el celular: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarCelular(id) {
+    if (confirm('¿Está seguro de eliminar este celular?')) {
+        $.ajax({
+            url: `/celular/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar el celular: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

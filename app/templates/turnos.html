@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-clock"></i> Turnos de Trabajo</h2>
+    </div>
+    <div class="col text-end">
+        <form class="d-inline-flex" method="GET">
+            <input type="date" class="form-control me-2" name="fecha" value="{{ fecha }}" onchange="this.form.submit()">
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Personal</h5>
+                <h2 class="card-text">{{ turnos|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Meseros</h5>
+                <h2 class="card-text">{{ turnos|selectattr('usuario.rol', 'equalto', 'mesero')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Activos Ahora</h5>
+                <h2 class="card-text">{{ turnos|selectattr('estado', 'equalto', 'activo')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Turnos Completados</h5>
+                <h2 class="card-text">{{ turnos|selectattr('estado', 'equalto', 'terminado')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Rol</th>
+                        <th>Hora Entrada</th>
+                        <th>Hora Salida</th>
+                        <th>Estado</th>
+                        <th>Horas Trabajadas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turno in turnos %}
+                    <tr>
+                        <td>{{ turno.usuario.nombre }}</td>
+                        <td>{{ turno.usuario.rol|title }}</td>
+                        <td>{{ turno.hora_entrada.strftime('%H:%M') }}</td>
+                        <td>
+                            {% if turno.hora_salida %}
+                                {{ turno.hora_salida.strftime('%H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if turno.estado == 'activo' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ turno.estado|title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if turno.hora_salida %}
+                                {% set horas = ((turno.hora_salida - turno.hora_entrada).total_seconds() / 3600)|round(1) %}
+                                {{ horas }} horas
+                            {% else %}
+                                {% set horas = ((now - turno.hora_entrada).total_seconds() / 3600)|round(1) %}
+                                {{ horas }} horas (en turno)
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-users"></i> Empleados</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_employees') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarEmpleado">
+            <i class="fas fa-plus"></i> Agregar Empleado
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Usuario</th>
+                        <th>Rol</th>
+                        <th>Teléfono</th>
+                        <th>Fecha Contratación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empleado in empleados %}
+                    <tr>
+                        <td>{{ empleado.nombre }}</td>
+                        <td>{{ empleado.username }}</td>
+                        <td>{{ empleado.rol|title }}</td>
+                        <td>{{ empleado.telefono or 'No especificado' }}</td>
+                        <td>{{ empleado.fecha_contratacion.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ empleado.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_employees') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarEmpleado({{ empleado.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarEmpleado({{ empleado.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nombre:</strong> <span id="detalle-nombre"></span></p>
+                        <p><strong>Usuario:</strong> <span id="detalle-username"></span></p>
+                        <p><strong>Rol:</strong> <span id="detalle-rol"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Teléfono:</strong> <span id="detalle-telefono"></span></p>
+                        <p><strong>Dirección:</strong> <span id="detalle-direccion"></span></p>
+                        <p><strong>Fecha Contratación:</strong> <span id="detalle-fecha"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Empleado -->
+<div class="modal fade" id="modalEditarEmpleado" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarEmpleado">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" id="editar-nombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario</label>
+                            <input type="text" id="editar-username" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Rol</label>
+                            <select id="editar-rol" class="form-select" required>
+                                <option value="admin">Administrador</option>
+                                <option value="vendedor">Vendedor</option>
+                                <option value="tecnico">Técnico</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" id="editar-telefono" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Dirección</label>
+                            <textarea id="editar-direccion" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nueva Contraseña (dejar en blanco para mantener la actual)</label>
+                            <input type="password" id="editar-password" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Contratación</label>
+                            <input type="date" id="editar-fecha" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_employees') %}
+<!-- Modal Agregar Empleado -->
+<div class="modal fade" id="modalAgregarEmpleado" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.empleados') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rol</label>
+                        <select name="rol" class="form-select" required>
+                            <option value="vendedor">Vendedor</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="telefono" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dirección</label>
+                        <textarea name="direccion" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/empleado/${id}`, function(data) {
+        $('#detalle-nombre').text(data.nombre);
+        $('#detalle-username').text(data.username);
+        $('#detalle-rol').text(data.rol.charAt(0).toUpperCase() + data.rol.slice(1));
+        $('#detalle-telefono').text(data.telefono || 'No especificado');
+        $('#detalle-direccion').text(data.direccion || 'No especificada');
+        $('#detalle-fecha').text(new Date(data.fecha_contratacion).toLocaleDateString());
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarEmpleado(id) {
+    $.get(`/empleado/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-nombre').val(data.nombre);
+        $('#editar-username').val(data.username);
+        $('#editar-rol').val(data.rol);
+        $('#editar-telefono').val(data.telefono);
+        $('#editar-direccion').val(data.direccion);
+        $('#editar-fecha').val(data.fecha_contratacion.split('T')[0]);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarEmpleado'));
+        modal.show();
+    });
+}
+
+$('#formEditarEmpleado').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        nombre: $('#editar-nombre').val(),
+        username: $('#editar-username').val(),
+        rol: $('#editar-rol').val(),
+        telefono: $('#editar-telefono').val(),
+        direccion: $('#editar-direccion').val(),
+        password: $('#editar-password').val(),
+        fecha_contratacion: $('#editar-fecha').val()
+    };
+    
+    $.ajax({
+        url: `/empleado/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar el empleado: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarEmpleado(id) {
+    if (confirm('¿Está seguro de eliminar este empleado? Esta acción no se puede deshacer.')) {
+        $.ajax({
+            url: `/empleado/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar el empleado: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

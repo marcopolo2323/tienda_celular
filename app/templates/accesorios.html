@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-headphones"></i> Accesorios</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if has_permission('manage_products') %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarAccesorio">
+            <i class="fas fa-plus"></i> Agregar Accesorio
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Marca</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for accesorio in accesorios %}
+                    <tr>
+                        <td>{{ accesorio.nombre }}</td>
+                        <td>{{ accesorio.marca.nombre }}</td>
+                        <td>{{ accesorio.categoria.nombre }}</td>
+                        <td>${{ "%.2f"|format(accesorio.precio) }}</td>
+                        <td>
+                            <span class="badge {% if accesorio.stock < 10 %}bg-danger{% else %}bg-success{% endif %}">
+                                {{ accesorio.stock }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verDetalles({{ accesorio.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-warning" onclick="editarAccesorio({{ accesorio.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            {% if has_permission('manage_products') %}
+                            <button class="btn btn-sm btn-danger" onclick="eliminarAccesorio({{ accesorio.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalles -->
+<div class="modal fade" id="modalVerDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Accesorio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nombre:</strong> <span id="detalle-nombre"></span></p>
+                        <p><strong>Marca:</strong> <span id="detalle-marca"></span></p>
+                        <p><strong>Categoría:</strong> <span id="detalle-categoria"></span></p>
+                        <p><strong>Precio:</strong> $<span id="detalle-precio"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Stock:</strong> <span id="detalle-stock"></span></p>
+                        <p><strong>Código de Producto:</strong> <span id="detalle-codigo"></span></p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <p><strong>Descripción:</strong></p>
+                        <p id="detalle-descripcion"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Accesorio -->
+<div class="modal fade" id="modalEditarAccesorio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Accesorio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarAccesorio">
+                <div class="modal-body">
+                    <input type="hidden" id="editar-id">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" id="editar-nombre" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Marca</label>
+                            <select id="editar-marca" class="form-select" required>
+                                {% for marca in marcas %}
+                                <option value="{{ marca.id }}">{{ marca.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Categoría</label>
+                            <select id="editar-categoria" class="form-select" required>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Precio</label>
+                            <input type="number" id="editar-precio" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Stock</label>
+                            <input type="number" id="editar-stock" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Código de Producto</label>
+                            <input type="text" id="editar-codigo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="editar-descripcion" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if has_permission('manage_products') %}
+<!-- Modal Agregar Accesorio -->
+<div class="modal fade" id="modalAgregarAccesorio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Accesorio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('productos.accesorios') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Marca</label>
+                        <select name="marca_id" class="form-select" required>
+                            <option value="">Seleccione una marca</option>
+                            {% for marca in marcas %}
+                            <option value="{{ marca.id }}">{{ marca.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select name="categoria_id" class="form-select" required>
+                            <option value="">Seleccione una categoría</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio</label>
+                        <input type="number" name="precio" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Stock</label>
+                        <input type="number" name="stock" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Código de Producto</label>
+                        <input type="text" name="codigo_producto" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetalles(id) {
+    $.get(`/accesorio/${id}`, function(data) {
+        $('#detalle-nombre').text(data.nombre);
+        $('#detalle-marca').text(data.marca);
+        $('#detalle-categoria').text(data.categoria);
+        $('#detalle-precio').text(data.precio.toFixed(2));
+        $('#detalle-stock').text(data.stock);
+        $('#detalle-codigo').text(data.codigo_producto);
+        $('#detalle-descripcion').text(data.descripcion);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    });
+}
+
+function editarAccesorio(id) {
+    $.get(`/accesorio/${id}`, function(data) {
+        $('#editar-id').val(id);
+        $('#editar-nombre').val(data.nombre);
+        $('#editar-marca').val(data.marca_id);
+        $('#editar-categoria').val(data.categoria_id);
+        $('#editar-precio').val(data.precio);
+        $('#editar-stock').val(data.stock);
+        $('#editar-codigo').val(data.codigo_producto);
+        $('#editar-descripcion').val(data.descripcion);
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarAccesorio'));
+        modal.show();
+    });
+}
+
+$('#formEditarAccesorio').on('submit', function(e) {
+    e.preventDefault();
+    var id = $('#editar-id').val();
+    
+    var data = {
+        nombre: $('#editar-nombre').val(),
+        marca_id: $('#editar-marca').val(),
+        categoria_id: $('#editar-categoria').val(),
+        precio: parseFloat($('#editar-precio').val()),
+        stock: parseInt($('#editar-stock').val()),
+        codigo_producto: $('#editar-codigo').val(),
+        descripcion: $('#editar-descripcion').val()
+    };
+    
+    $.ajax({
+        url: `/accesorio/${id}`,
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(result) {
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al actualizar el accesorio: ' + xhr.responseJSON.error);
+        }
+    });
+});
+
+function eliminarAccesorio(id) {
+    if (confirm('¿Está seguro de eliminar este accesorio?')) {
+        $.ajax({
+            url: `/accesorio/${id}`,
+            type: 'DELETE',
+            success: function(result) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error al eliminar el accesorio: ' + xhr.responseJSON.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 
