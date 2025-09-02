@@ -21,7 +21,7 @@ def create_app():
     def load_user(user_id):
         return Usuario.query.get(int(user_id))
     
-    # AGREGAR ESTA FUNCIÓN PARA LOS TEMPLATES
+    # FUNCIÓN PARA LOS TEMPLATES - Mejorada
     @app.template_global()
     def has_permission(permission_name):
         """Verificar si el usuario actual tiene un permiso específico"""
@@ -31,27 +31,37 @@ def create_app():
         # Lógica de permisos basada en el rol del usuario
         user_role = current_user.rol
         
-        # Definir permisos por rol
+        # Definir permisos por rol - ACTUALIZADO para coincidir con templates
         permissions = {
             'admin': [
                 'manage_employees', 'manage_products', 'manage_sales', 
-                'manage_services', 'view_reports', 'manage_users'
+                'manage_services', 'view_reports', 'manage_users',
+                'edit_products', 'view_products', 'delete_products'
             ],
             'manager': [
                 'manage_employees', 'manage_products', 'manage_sales', 
-                'manage_services', 'view_reports'
+                'manage_services', 'view_reports', 'edit_products', 'view_products'
             ],
             'employee': [
-                'manage_products', 'manage_sales', 'manage_services'
+                'manage_products', 'manage_sales', 'manage_services',
+                'edit_products', 'view_products'
             ],
             'viewer': [
-                'view_reports'
+                'view_reports', 'view_products'
             ]
         }
         
         # Verificar si el rol del usuario tiene el permiso solicitado
         user_permissions = permissions.get(user_role, [])
         return permission_name in user_permissions
+    
+    # AGREGAR función auxiliar para debugging
+    @app.template_global()
+    def debug_user_role():
+        """Para debugging - mostrar rol actual del usuario"""
+        if current_user.is_authenticated:
+            return current_user.rol
+        return 'not_authenticated'
     
     # Registrar Blueprints
     from app.routes.auth import auth_bp
@@ -60,6 +70,7 @@ def create_app():
     from app.routes.ventas import ventas_bp
     from app.routes.servicios import servicios_bp
     from app.routes.admin import admin_bp
+    from app.routes.clientes import clientes_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -67,12 +78,25 @@ def create_app():
     app.register_blueprint(ventas_bp, url_prefix='/ventas')
     app.register_blueprint(servicios_bp, url_prefix='/servicios')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(clientes_bp, url_prefix='/clientes')
     
     # Registrar manejadores de errores
     register_error_handlers(app)
     
     # Crear tablas y datos iniciales
     with app.app_context():
+        # Imprimir la ruta de la base de datos para depuración
+        import os
+        print(f"Usando base de datos: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        # Solo crear directorio si no es una base de datos en memoria
+        if ':memory:' not in app.config['SQLALCHEMY_DATABASE_URI']:
+            db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+            db_dir = os.path.dirname(db_path)
+            if db_dir:  # Solo si hay un directorio para crear
+                print(f"Directorio de la base de datos: {db_dir}")
+                if not os.path.exists(db_dir):
+                    print(f"Creando directorio: {db_dir}")
+                    os.makedirs(db_dir, exist_ok=True)
         db.create_all()
         create_initial_data()
     
@@ -105,5 +129,30 @@ def create_initial_data():
             direccion=''
         )
         db.session.add(admin)
+        
+        # AGREGAR: Crear un manager y empleado de prueba
+        manager = Usuario(
+            username='manager',
+            password=generate_password_hash('manager123'),
+            nombre='Manager de Prueba',
+            rol='manager',
+            telefono='123456789',
+            direccion='Dirección del Manager'
+        )
+        db.session.add(manager)
+        
+        employee = Usuario(
+            username='employee',
+            password=generate_password_hash('employee123'),
+            nombre='Empleado de Prueba',
+            rol='employee',
+            telefono='987654321',
+            direccion='Dirección del Empleado'
+        )
+        db.session.add(employee)
+        
         db.session.commit()
-        print("✅ Usuario admin creado: admin/admin123")
+        print("✅ Usuarios creados:")
+        print("   - Admin: admin/admin123")
+        print("   - Manager: manager/manager123") 
+        print("   - Employee: employee/employee123")

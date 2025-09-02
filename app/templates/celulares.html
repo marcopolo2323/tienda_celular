@@ -48,8 +48,6 @@
                             <button class="btn btn-sm btn-warning" onclick="editarCelular({{ celular.id }})">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            {% endif %}
-                            {% if has_permission('manage_products') %}
                             <button class="btn btn-sm btn-danger" onclick="eliminarCelular({{ celular.id }})">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -162,6 +160,8 @@
                         <p><strong>Modelo:</strong> <span id="detalle-modelo"></span></p>
                         <p><strong>Precio:</strong> $<span id="detalle-precio"></span></p>
                         <p><strong>Stock:</strong> <span id="detalle-stock"></span></p>
+                        <p><strong>Color:</strong> <span id="detalle-color"></span></p>
+                        <p><strong>Pantalla:</strong> <span id="detalle-pantalla"></span></p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Estado:</strong> <span id="detalle-estado"></span></p>
@@ -203,54 +203,54 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Modelo</label>
-                            <input type="text" id="editar-modelo" class="form-control" required>
+                            <input type="text" id="editar-modelo" name="modelo" class="form-control" required>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Precio</label>
-                            <input type="number" id="editar-precio" class="form-control" step="0.01" required>
+                            <input type="number" id="editar-precio" name="precio" class="form-control" step="0.01" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Stock</label>
-                            <input type="number" id="editar-stock" class="form-control" required>
+                            <input type="number" id="editar-stock" name="stock" class="form-control" required>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Estado</label>
-                            <select id="editar-estado" class="form-select" required>
+                            <select id="editar-estado" name="estado" class="form-select" required>
                                 <option value="nuevo">Nuevo</option>
                                 <option value="reacondicionado">Reacondicionado</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">IMEI</label>
-                            <input type="text" id="editar-imei" class="form-control" required>
+                            <input type="text" id="editar-imei" name="imei" class="form-control" required>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label class="form-label">Descripción</label>
-                            <textarea id="editar-descripcion" class="form-control" rows="3"></textarea>
+                            <textarea id="editar-descripcion" name="descripcion" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-3">
                             <label class="form-label">RAM</label>
-                            <input type="text" id="editar-ram" class="form-control" required>
+                            <input type="text" id="editar-ram" name="ram" class="form-control" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Almacenamiento</label>
-                            <input type="text" id="editar-almacenamiento" class="form-control" required>
+                            <input type="text" id="editar-almacenamiento" name="almacenamiento" class="form-control" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Color</label>
-                            <input type="text" id="editar-color" class="form-control" required>
+                            <input type="text" id="editar-color" name="color" class="form-control" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Pantalla</label>
-                            <input type="text" id="editar-pantalla" class="form-control" required>
+                            <input type="text" id="editar-pantalla" name="pantalla" class="form-control" required>
                         </div>
                     </div>
                 </div>
@@ -268,7 +268,7 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    $.get(`/celular/${id}`, function(data) {
+    $.get(`/productos/celular/${id}`, function(data) {
         $('#detalle-marca').text(data.marca);
         $('#detalle-modelo').text(data.modelo);
         $('#detalle-precio').text(data.precio.toFixed(2));
@@ -277,6 +277,8 @@ function verDetalles(id) {
         $('#detalle-imei').text(data.imei);
         $('#detalle-ram').text(data.especificaciones.ram);
         $('#detalle-almacenamiento').text(data.especificaciones.almacenamiento);
+        $('#detalle-color').text(data.especificaciones.color);
+        $('#detalle-pantalla').text(data.especificaciones.pantalla);
         $('#detalle-descripcion').text(data.descripcion);
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
@@ -285,7 +287,7 @@ function verDetalles(id) {
 }
 
 function editarCelular(id) {
-    $.get(`/celular/${id}`, function(data) {
+    $.get(`/productos/celular/${id}`, function(data) {
         $('#editar-id').val(id);
         $('#editar-marca').val(data.marca_id);
         $('#editar-modelo').val(data.modelo);
@@ -325,7 +327,7 @@ $('#formEditarCelular').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/celular/${id}`,
+        url: `/productos/celular/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
@@ -341,7 +343,7 @@ $('#formEditarCelular').on('submit', function(e) {
 function eliminarCelular(id) {
     if (confirm('¿Está seguro de eliminar este celular?')) {
         $.ajax({
-            url: `/celular/${id}`,
+            url: `/productos/celular/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
@@ -353,4 +355,4 @@ function eliminarCelular(id) {
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

@@ -139,7 +139,8 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    $.get(`/marca/${id}`, function(data) {
+    // La URL ya era correcta, pero agregamos manejo de errores
+    $.get(`/admin/marca/${id}`, function(data) {
         $('#detalle-nombre').text(data.nombre);
         
         const listaCelulares = $('#lista-celulares');
@@ -148,26 +149,39 @@ function verDetalles(id) {
         listaCelulares.empty();
         listaAccesorios.empty();
         
-        data.celulares.forEach(celular => {
-            listaCelulares.append(`<li>${celular.modelo} - Stock: ${celular.stock}</li>`);
-        });
+        if (data.celulares && data.celulares.length > 0) {
+            data.celulares.forEach(celular => {
+                listaCelulares.append(`<li>${celular.modelo} - Stock: ${celular.stock}</li>`);
+            });
+        } else {
+            listaCelulares.append('<li class="text-muted">No hay celulares</li>');
+        }
         
-        data.accesorios.forEach(accesorio => {
-            listaAccesorios.append(`<li>${accesorio.nombre} - Stock: ${accesorio.stock}</li>`);
-        });
+        if (data.accesorios && data.accesorios.length > 0) {
+            data.accesorios.forEach(accesorio => {
+                listaAccesorios.append(`<li>${accesorio.nombre} - Stock: ${accesorio.stock}</li>`);
+            });
+        } else {
+            listaAccesorios.append('<li class="text-muted">No hay accesorios</li>');
+        }
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los detalles de la marca: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
 function editarMarca(id) {
-    $.get(`/marca/${id}`, function(data) {
+    // Corregir la URL para que coincida con el patrón usado en verDetalles
+    $.get(`/admin/marca/${id}`, function(data) {
         $('#editar-id').val(id);
         $('#editar-nombre').val(data.nombre);
         
         var modal = new bootstrap.Modal(document.getElementById('modalEditarMarca'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los datos de la marca: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
@@ -180,7 +194,7 @@ $('#formEditarMarca').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/marca/${id}`,
+        url: `/admin/marca/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
@@ -188,7 +202,7 @@ $('#formEditarMarca').on('submit', function(e) {
             location.reload();
         },
         error: function(xhr) {
-            alert('Error al actualizar la marca: ' + xhr.responseJSON.error);
+            alert('Error al actualizar la marca: ' + (xhr.responseJSON?.error || 'Error desconocido'));
         }
     });
 });
@@ -196,16 +210,16 @@ $('#formEditarMarca').on('submit', function(e) {
 function eliminarMarca(id) {
     if (confirm('¿Está seguro de eliminar esta marca? Esta acción eliminará todos los productos asociados.')) {
         $.ajax({
-            url: `/marca/${id}`,
+            url: `/admin/marca/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('Error al eliminar la marca: ' + xhr.responseJSON.error);
+                alert('Error al eliminar la marca: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

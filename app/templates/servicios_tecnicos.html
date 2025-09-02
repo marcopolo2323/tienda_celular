@@ -65,6 +65,43 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Paginación -->
+        {% if servicios.pages > 1 %}
+        <nav aria-label="Navegación de páginas">
+            <ul class="pagination justify-content-center">
+                {% if servicios.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('servicios.servicios_tecnicos', page=servicios.prev_num) }}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in servicios.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != servicios.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('servicios.servicios_tecnicos', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if servicios.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('servicios.servicios_tecnicos', page=servicios.next_num) }}">Siguiente</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -148,7 +185,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Fecha Entrega Estimada</label>
-                            <input type="datetime-local" id="editar-fecha-entrega" class="form-control">
+                            <input type="date" id="editar-fecha-entrega" class="form-control">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Costo</label>
@@ -255,38 +292,52 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    $.get(`/servicio_tecnico/${id}`, function(data) {
-        $('#detalle-cliente').text(data.cliente_nombre);
-        $('#detalle-telefono').text(data.cliente_telefono);
-        $('#detalle-tipo').text(data.tipo.replace('_', ' ').charAt(0).toUpperCase() + data.tipo.slice(1));
-        $('#detalle-estado').text(data.estado.replace('_', ' ').charAt(0).toUpperCase() + data.estado.slice(1));
-        $('#detalle-fecha-recepcion').text(new Date(data.fecha_recepcion).toLocaleString());
+    // Usar una URL más consistente con el patrón del blueprint servicios
+    $.get(`/servicios/servicio_tecnico/${id}`, function(data) {
+        $('#detalle-cliente').text(data.cliente_nombre || 'No especificado');
+        $('#detalle-telefono').text(data.cliente_telefono || 'No especificado');
+        $('#detalle-tipo').text(data.tipo ? data.tipo.replace('_', ' ').charAt(0).toUpperCase() + data.tipo.slice(1) : 'No especificado');
+        $('#detalle-estado').text(data.estado ? data.estado.replace('_', ' ').charAt(0).toUpperCase() + data.estado.slice(1) : 'No especificado');
+        $('#detalle-fecha-recepcion').text(data.fecha_recepcion ? new Date(data.fecha_recepcion).toLocaleString() : 'No especificada');
         $('#detalle-fecha-entrega').text(data.fecha_entrega_estimada ? new Date(data.fecha_entrega_estimada).toLocaleString() : 'No especificada');
-        $('#detalle-tecnico').text(data.tecnico_nombre || 'Sin asignar');
+        $('#detalle-tecnico').text((data.tecnico && data.tecnico.nombre) || 'Sin asignar');
         $('#detalle-costo').text(data.costo ? data.costo.toFixed(2) : '0.00');
-        $('#detalle-descripcion').text(data.descripcion);
+        $('#detalle-descripcion').text(data.descripcion || 'Sin descripción');
         $('#detalle-notas').text(data.notas_tecnicas || 'Sin notas');
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los detalles: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
 function editarServicio(id) {
-    $.get(`/servicio_tecnico/${id}`, function(data) {
+    $.get(`/servicios/servicio_tecnico/${id}`, function(data) {
         $('#editar-id').val(id);
-        $('#editar-cliente').val(data.cliente_nombre);
-        $('#editar-telefono').val(data.cliente_telefono);
-        $('#editar-tipo').val(data.tipo);
-        $('#editar-estado').val(data.estado);
-        $('#editar-fecha-entrega').val(data.fecha_entrega_estimada ? data.fecha_entrega_estimada.slice(0, 16) : '');
-        $('#editar-costo').val(data.costo);
-        $('#editar-descripcion').val(data.descripcion);
-        $('#editar-notas').val(data.notas_tecnicas);
+        $('#editar-cliente').val(data.cliente_nombre || '');
+        $('#editar-telefono').val(data.cliente_telefono || '');
+        $('#editar-tipo').val(data.tipo || '');
+        $('#editar-estado').val(data.estado || '');
+        
+        // Formatear fecha para input type="date"
+        if (data.fecha_entrega_estimada) {
+            const fecha = new Date(data.fecha_entrega_estimada);
+            const fechaFormateada = fecha.getFullYear() + '-' + 
+                String(fecha.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(fecha.getDate()).padStart(2, '0');
+            $('#editar-fecha-entrega').val(fechaFormateada);
+        }
+        
+        $('#editar-costo').val(data.costo || '');
+        $('#editar-descripcion').val(data.descripcion || '');
+        $('#editar-notas').val(data.notas_tecnicas || '');
         $('#editar-tecnico').val(data.tecnico_id || '');
         
         var modal = new bootstrap.Modal(document.getElementById('modalEditarServicio'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los datos: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
@@ -299,7 +350,7 @@ $('#formEditarServicio').on('submit', function(e) {
         cliente_telefono: $('#editar-telefono').val(),
         tipo: $('#editar-tipo').val(),
         estado: $('#editar-estado').val(),
-        fecha_entrega_estimada: $('#editar-fecha-entrega').val(),
+        fecha_entrega_estimada: $('#editar-fecha-entrega').val() || null,
         costo: parseFloat($('#editar-costo').val()) || null,
         descripcion: $('#editar-descripcion').val(),
         notas_tecnicas: $('#editar-notas').val(),
@@ -307,32 +358,33 @@ $('#formEditarServicio').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/servicio_tecnico/${id}`,
+        url: `/servicios/servicio_tecnico/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
         success: function(result) {
+            $('#modalEditarServicio').modal('hide');
             location.reload();
         },
         error: function(xhr) {
-            alert('Error al actualizar el servicio: ' + xhr.responseJSON.error);
+            alert('Error al actualizar el servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
         }
     });
 });
 
 function eliminarServicio(id) {
-    if (confirm('¿Está seguro de eliminar este servicio?')) {
+    if (confirm('¿Está seguro de eliminar este servicio? Esta acción no se puede deshacer.')) {
         $.ajax({
-            url: `/servicio_tecnico/${id}`,
+            url: `/servicios/servicio_tecnico/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('Error al eliminar el servicio: ' + xhr.responseJSON.error);
+                alert('Error al eliminar el servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

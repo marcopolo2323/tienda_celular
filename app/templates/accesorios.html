@@ -225,8 +225,10 @@
 
 {% block scripts %}
 <script>
+// Reemplaza las URLs en el script de accesorios.html
+
 function verDetalles(id) {
-    $.get(`/accesorio/${id}`, function(data) {
+    $.get(`/productos/accesorio/${id}`, function(data) {
         $('#detalle-nombre').text(data.nombre);
         $('#detalle-marca').text(data.marca);
         $('#detalle-categoria').text(data.categoria);
@@ -237,11 +239,13 @@ function verDetalles(id) {
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los detalles: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
 function editarAccesorio(id) {
-    $.get(`/accesorio/${id}`, function(data) {
+    $.get(`/productos/accesorio/${id}`, function(data) {
         $('#editar-id').val(id);
         $('#editar-nombre').val(data.nombre);
         $('#editar-marca').val(data.marca_id);
@@ -253,6 +257,8 @@ function editarAccesorio(id) {
         
         var modal = new bootstrap.Modal(document.getElementById('modalEditarAccesorio'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los datos: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
@@ -271,15 +277,16 @@ $('#formEditarAccesorio').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/accesorio/${id}`,
+        url: `/productos/accesorio/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
         success: function(result) {
+            $('#modalEditarAccesorio').modal('hide');
             location.reload();
         },
         error: function(xhr) {
-            alert('Error al actualizar el accesorio: ' + xhr.responseJSON.error);
+            alert('Error al actualizar el accesorio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
         }
     });
 });
@@ -287,13 +294,13 @@ $('#formEditarAccesorio').on('submit', function(e) {
 function eliminarAccesorio(id) {
     if (confirm('¿Está seguro de eliminar este accesorio?')) {
         $.ajax({
-            url: `/accesorio/${id}`,
+            url: `/productos/accesorio/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('Error al eliminar el accesorio: ' + xhr.responseJSON.error);
+                alert('Error al eliminar el accesorio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
     }

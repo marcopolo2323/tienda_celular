@@ -88,7 +88,42 @@
 {% block scripts %}
 <script>
 function editarCliente(id) {
-    // Implementar edición
+    fetch(`/clientes/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            // Llenar el formulario con los datos del cliente
+            document.getElementById('nombre').value = data.nombre;
+            document.getElementById('email').value = data.email;
+            document.getElementById('telefono').value = data.telefono;
+            document.getElementById('direccion').value = data.direccion;
+            
+            // Cambiar el título del modal
+            document.querySelector('#nuevoClienteModal .modal-title').textContent = 'Editar Cliente';
+            
+            // Cambiar el action del formulario
+            const form = document.getElementById('clienteForm');
+            form.action = `/clientes/${id}`;
+            form.method = 'POST';
+            
+            // Agregar campo oculto para método PUT
+            let methodInput = document.getElementById('_method');
+            if (!methodInput) {
+                methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.id = '_method';
+                form.appendChild(methodInput);
+            }
+            methodInput.value = 'PUT';
+            
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('nuevoClienteModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar los datos del cliente');
+        });
 }
 
 function eliminarCliente(id) {
@@ -103,4 +138,4 @@ function eliminarCliente(id) {
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

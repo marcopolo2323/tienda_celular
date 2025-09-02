@@ -55,6 +55,43 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginación -->
+        {% if ventas.pages > 1 %}
+        <nav aria-label="Navegación de páginas">
+            <ul class="pagination justify-content-center">
+                {% if ventas.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('ventas.historial', page=ventas.prev_num) }}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in ventas.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != ventas.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('ventas.historial', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if ventas.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('ventas.historial', page=ventas.next_num) }}">Siguiente</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -115,60 +152,97 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    fetch(`/ventas/${id}/detalles`)
-        .then(response => response.json())
-        .then(data => {
+    // Usar la ruta correcta que está definida en el blueprint
+    $.get(`/ventas/${id}/detalles`)
+        .done(function(data) {
             // Información del cliente
-            document.getElementById('cliente-nombre').textContent = data.cliente_nombre;
-            document.getElementById('cliente-telefono').textContent = data.cliente_telefono || 'No especificado';
-            document.getElementById('cliente-email').textContent = data.cliente_email || 'No especificado';
+            $('#cliente-nombre').text(data.cliente_nombre || 'No especificado');
+            $('#cliente-telefono').text(data.cliente_telefono || 'No especificado');
+            $('#cliente-email').text(data.cliente_email || 'No especificado');
             
             // Información de la venta
-            document.getElementById('venta-fecha').textContent = new Date(data.fecha_venta).toLocaleString();
-            document.getElementById('venta-vendedor').textContent = data.vendedor_nombre;
-            document.getElementById('venta-metodo').textContent = data.metodo_pago;
-            document.getElementById('venta-estado').textContent = data.estado;
+            $('#venta-fecha').text(data.fecha_venta ? new Date(data.fecha_venta).toLocaleString() : 'No especificada');
+            $('#venta-vendedor').text((data.vendedor && data.vendedor.nombre) || 'No especificado');
+            $('#venta-metodo').text(data.metodo_pago ? data.metodo_pago.charAt(0).toUpperCase() + data.metodo_pago.slice(1) : 'No especificado');
+            $('#venta-estado').text(data.estado ? data.estado.charAt(0).toUpperCase() + data.estado.slice(1) : 'No especificado');
             
             // Productos
-            const tbody = document.getElementById('detalles-productos');
-            tbody.innerHTML = '';
+            const tbody = $('#detalles-productos');
+            tbody.empty();
             
-            data.detalles.forEach(detalle => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${detalle.producto_nombre}</td>
-                    <td>${detalle.tipo_producto}</td>
-                    <td>${detalle.cantidad}</td>
-                    <td>$${detalle.precio_unitario.toFixed(2)}</td>
-                    <td>$${(detalle.cantidad * detalle.precio_unitario).toFixed(2)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            if (data.detalles && data.detalles.length > 0) {
+                data.detalles.forEach(detalle => {
+                    const subtotal = (detalle.cantidad || 0) * (detalle.precio_unitario || 0);
+                    const row = `
+                        <tr>
+                            <td>${detalle.producto_nombre || 'N/A'}</td>
+                            <td>${detalle.tipo_producto || 'N/A'}</td>
+                            <td>${detalle.cantidad || 0}</td>
+                            <td>$${(detalle.precio_unitario || 0).toFixed(2)}</td>
+                            <td>$${subtotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                });
+            } else {
+                tbody.append('<tr><td colspan="5" class="text-center text-muted">No hay productos</td></tr>');
+            }
             
             // Total
-            document.getElementById('detalles-total').textContent = data.total.toFixed(2);
+            $('#detalles-total').text((data.total || 0).toFixed(2));
             
             // Mostrar modal
-            const modal = new bootstrap.Modal(document.getElementById('modalDetallesVenta'));
+            var modal = new bootstrap.Modal(document.getElementById('modalDetallesVenta'));
             modal.show();
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al cargar los detalles de la venta');
+        .fail(function(xhr, status, error) {
+            console.error('Error al cargar detalles:', {
+                status: xhr.status,
+                responseText: xhr.responseText,
+                error: error
+            });
+            
+            // Mensaje de error más descriptivo
+            let errorMsg = 'Error al cargar los detalles de la venta';
+            if (xhr.status === 404) {
+                errorMsg = 'La venta no fue encontrada';
+            } else if (xhr.status === 500) {
+                errorMsg = 'Error interno del servidor. Por favor, contacte al administrador';
+            }
+            
+            alert(errorMsg);
         });
 }
 
 function cancelarVenta(id) {
     if (confirm('¿Está seguro de cancelar esta venta? Esta acción no se puede deshacer.')) {
-        fetch(`/ventas/${id}/cancelar`, { method: 'POST' })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Error al cancelar la venta');
+        $.ajax({
+            url: `/ventas/${id}/cancelar`,
+            type: 'POST',
+            success: function(result) {
+                alert('Venta cancelada exitosamente');
+                location.reload();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al cancelar venta:', {
+                    status: xhr.status,
+                    responseText: xhr.responseText,
+                    error: error
+                });
+                
+                let errorMsg = 'Error al cancelar la venta';
+                if (xhr.status === 404) {
+                    errorMsg = 'La venta no fue encontrada';
+                } else if (xhr.status === 403) {
+                    errorMsg = 'No tiene permisos para cancelar esta venta';
+                } else if (xhr.status === 500) {
+                    errorMsg = 'Error interno del servidor';
                 }
-            });
+                
+                alert(errorMsg);
+            }
+        });
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

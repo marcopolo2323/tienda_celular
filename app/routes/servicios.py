@@ -33,7 +33,6 @@ def servicios_tecnicos():
                 descripcion=data['descripcion'],
                 cliente_nombre=data['cliente_nombre'],
                 cliente_telefono=data['cliente_telefono'],
-                cliente_email=data.get('cliente_email', ''),
                 fecha_entrega_estimada=fecha_entrega,
                 costo=float(data['costo']),
                 tecnico_id=int(data['tecnico_id']) if data.get('tecnico_id') else None,
@@ -135,7 +134,6 @@ def detalles_servicio(id):
         'descripcion': servicio.descripcion,
         'cliente_nombre': servicio.cliente_nombre,
         'cliente_telefono': servicio.cliente_telefono,
-        'cliente_email': servicio.cliente_email,
         'estado': servicio.estado,
         'costo': float(servicio.costo),
         'fecha_recepcion': servicio.fecha_recepcion.isoformat(),
@@ -143,8 +141,8 @@ def detalles_servicio(id):
         'fecha_finalizacion': servicio.fecha_finalizacion.isoformat() if servicio.fecha_finalizacion else None,
         'tecnico_nombre': servicio.tecnico.nombre if servicio.tecnico else None,
         'notas_tecnicas': servicio.notas_tecnicas or '',
-        'diagnostico': servicio.diagnostico or '',
-        'solucion': servicio.solucion or ''
+        'diagnostico': getattr(servicio, 'diagnostico', '') or '',
+        'solucion': getattr(servicio, 'solucion', '') or ''
     })
 
 @servicios_bp.route('/tecnicos/<int:id>/diagnostico', methods=['POST'])
@@ -159,12 +157,17 @@ def actualizar_diagnostico(id):
         return redirect(url_for('servicios.servicios_tecnicos'))
     
     try:
-        servicio.diagnostico = request.form.get('diagnostico', '')
-        servicio.solucion = request.form.get('solucion', '')
+        # Solo actualizar campos que existen en el modelo
+        if hasattr(servicio, 'diagnostico'):
+            servicio.diagnostico = request.form.get('diagnostico', '')
+        if hasattr(servicio, 'solucion'):
+            servicio.solucion = request.form.get('solucion', '')
+        
         servicio.notas_tecnicas = request.form.get('notas_tecnicas', '')
         
         # Si se proporciona una solución, cambiar estado a en_progreso
-        if servicio.solucion and servicio.estado == 'pendiente':
+        if (hasattr(servicio, 'solucion') and servicio.solucion and 
+            servicio.estado == 'pendiente'):
             servicio.estado = 'en_progreso'
         
         db.session.commit()
@@ -244,3 +247,96 @@ def reportes_servicios():
                          servicios_en_progreso=servicios_en_progreso,
                          servicios_completados=servicios_completados,
                          tecnicos_stats=tecnicos_stats)
+
+@servicios_bp.route('/servicio_tecnico/<int:id>', methods=['GET'])
+@login_required
+def obtener_servicio_tecnico(id):
+    """Obtener datos de un servicio técnico para edición"""
+    try:
+        servicio = Servicio.query.get_or_404(id)
+        return jsonify({
+            'id': servicio.id,
+            'tipo': servicio.tipo,
+            'descripcion': servicio.descripcion,
+            'cliente_nombre': servicio.cliente_nombre,
+            'cliente_telefono': servicio.cliente_telefono,
+            'fecha_recepcion': servicio.fecha_recepcion.isoformat(),
+            'fecha_entrega_estimada': servicio.fecha_entrega_estimada.isoformat() if servicio.fecha_entrega_estimada else None,
+            'estado': servicio.estado,
+            'costo': float(servicio.costo),
+            'tecnico_id': servicio.tecnico_id,
+            'tecnico_nombre': servicio.tecnico.nombre if servicio.tecnico else None,
+            'notas_tecnicas': servicio.notas_tecnicas or '',
+            'diagnostico': getattr(servicio, 'diagnostico', '') or '',
+            'solucion': getattr(servicio, 'solucion', '') or ''
+        })
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener servicio: {str(e)}'}), 500
+
+@servicios_bp.route('/servicio_tecnico/<int:id>', methods=['PUT'])
+@login_required
+def actualizar_servicio_api(id):
+    """Actualizar servicio técnico via API"""
+    try:
+        servicio = Servicio.query.get_or_404(id)
+        data = request.get_json()
+        
+        # Actualizar campos básicos
+        if 'cliente_nombre' in data:
+            servicio.cliente_nombre = data['cliente_nombre']
+        if 'cliente_telefono' in data:
+            servicio.cliente_telefono = data['cliente_telefono']
+        if 'tipo' in data:
+            servicio.tipo = data['tipo']
+        if 'descripcion' in data:
+            servicio.descripcion = data['descripcion']
+        if 'estado' in data:
+            servicio.estado = data['estado']
+        if 'costo' in data and data['costo']:
+            servicio.costo = float(data['costo'])
+        if 'tecnico_id' in data:
+            servicio.tecnico_id = int(data['tecnico_id']) if data['tecnico_id'] else None
+        if 'notas_tecnicas' in data:
+            servicio.notas_tecnicas = data['notas_tecnicas']
+        
+        # Actualizar fecha de entrega si se proporciona
+        if 'fecha_entrega_estimada' in data and data['fecha_entrega_estimada']:
+            try:
+                # Manejar diferentes formatos de fecha
+                fecha_str = data['fecha_entrega_estimada']
+                if 'T' in fecha_str:
+                    # Formato datetime-local
+                    fecha_dt = datetime.fromisoformat(fecha_str.replace('Z', ''))
+                    servicio.fecha_entrega_estimada = fecha_dt.date()
+                else:
+                    # Formato date
+                    servicio.fecha_entrega_estimada = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except ValueError as e:
+                return jsonify({'error': f'Formato de fecha inválido: {str(e)}'}), 400
+        
+        # Si se marca como completado, actualizar fecha de finalización
+        if servicio.estado == 'completado' and not servicio.fecha_finalizacion:
+            servicio.fecha_finalizacion = datetime.utcnow()
+        
+        db.session.commit()
+        return jsonify({'message': 'Servicio técnico actualizado exitosamente'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@servicios_bp.route('/servicio_tecnico/<int:id>', methods=['DELETE'])
+@login_required
+def eliminar_servicio_api(id):
+    """Eliminar servicio técnico"""
+    if current_user.rol not in ['admin', 'gerente']:
+        return jsonify({'error': 'No tienes permisos para eliminar servicios'}), 403
+    
+    try:
+        servicio = Servicio.query.get_or_404(id)
+        db.session.delete(servicio)
+        db.session.commit()
+        return jsonify({'message': 'Servicio técnico eliminado exitosamente'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

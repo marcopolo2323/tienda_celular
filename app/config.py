@@ -3,7 +3,11 @@ from datetime import timedelta
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(24)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///tienda_celulares.db'
+    # Usar ruta explícita para la base de datos SQLite en el directorio instance
+    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    instance_path = os.path.join(basedir, 'instance')
+    db_path = os.path.join(instance_path, 'tienda_celulares.db')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{db_path}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Configuraciones adicionales
@@ -24,7 +28,8 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///./test.db'
+
 
 config = {
     'development': DevelopmentConfig,

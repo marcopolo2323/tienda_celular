@@ -45,20 +45,31 @@ def nueva_venta():
 @ventas_bp.route('/<int:id>/detalles')
 @login_required
 def detalles_venta(id):
-    venta = Venta.query.get_or_404(id)
-    detalles = get_sale_details(venta)
-    
-    return jsonify({
-        'cliente_nombre': venta.cliente_nombre,
-        'cliente_telefono': venta.cliente_telefono,
-        'cliente_email': venta.cliente_email,
-        'fecha_venta': venta.fecha_venta.isoformat(),
-        'vendedor_nombre': venta.vendedor.nombre,
-        'metodo_pago': venta.metodo_pago,
-        'estado': venta.estado,
-        'total': float(venta.total),
-        'detalles': detalles
-    })
+    try:
+        venta = Venta.query.get_or_404(id)
+        detalles = get_sale_details(venta)
+        
+        # Datos basados en el modelo real
+        response_data = {
+            'cliente_nombre': venta.cliente_nombre or 'No especificado',
+            'cliente_telefono': venta.cliente_telefono or 'No especificado',
+            'cliente_email': None,  # Este campo no existe en el modelo, siempre será None
+            'fecha_venta': venta.fecha_venta.isoformat() if venta.fecha_venta else None,
+            'vendedor_nombre': venta.vendedor.nombre if venta.vendedor else 'No especificado',
+            'metodo_pago': venta.metodo_pago or 'No especificado',
+            'estado': venta.estado or 'No especificado',
+            'total': float(venta.total) if venta.total else 0.0,
+            'detalles': detalles or []
+        }
+        
+        return jsonify(response_data)
+        
+    except AttributeError as e:
+        # Error específico de atributos faltantes
+        return jsonify({'error': f'Campo faltante en el modelo: {str(e)}'}), 500
+    except Exception as e:
+        # Otros errores
+        return jsonify({'error': f'Error al obtener detalles de venta: {str(e)}'}), 500
 
 @ventas_bp.route('/<int:id>/cancelar', methods=['POST'])
 @login_required
@@ -69,9 +80,9 @@ def cancelar_venta(id):
             flash('Venta cancelada exitosamente', 'success')
             return '', 204
         else:
-            return result['message'], 400
+            return jsonify({'error': result['message']}), 400
     except Exception as e:
-        return f'Error al cancelar venta: {str(e)}', 500
+        return jsonify({'error': f'Error al cancelar venta: {str(e)}'}), 500
 
 @ventas_bp.route('/api/producto/<tipo>/<int:id>')
 @login_required

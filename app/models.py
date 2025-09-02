@@ -4,6 +4,14 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+class Cliente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(120), nullable=False)
+    telefono = db.Column(db.String(20))
+    direccion = db.Column(db.Text)
+    fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
+    ventas = db.relationship('Venta', backref='cliente', lazy=True)
+
 class Usuario(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -60,9 +68,9 @@ class ServicioTV(db.Model):
 class Venta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vendedor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=True)
     cliente_nombre = db.Column(db.String(120), nullable=False)
     cliente_telefono = db.Column(db.String(20))
-    cliente_email = db.Column(db.String(120))
     fecha_venta = db.Column(db.DateTime, default=datetime.utcnow)
     total = db.Column(db.Float, default=0.0)
     metodo_pago = db.Column(db.String(50))  # efectivo, tarjeta, transferencia
@@ -92,4 +100,4 @@ class Servicio(db.Model):
     tecnico_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
     notas_tecnicas = db.Column(db.Text)
     
-    tecnico = db.relationship('Usuario', backref='servicios') 
+    tecnico = db.relationship('Usuario', backref='servicios')

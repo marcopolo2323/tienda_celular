@@ -198,7 +198,8 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    $.get(`/empleado/${id}`, function(data) {
+    // Corregir la URL para que coincida con el blueprint admin
+    $.get(`/admin/empleado/${id}`, function(data) {
         $('#detalle-nombre').text(data.nombre);
         $('#detalle-username').text(data.username);
         $('#detalle-rol').text(data.rol.charAt(0).toUpperCase() + data.rol.slice(1));
@@ -208,11 +209,14 @@ function verDetalles(id) {
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los detalles del empleado: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
 function editarEmpleado(id) {
-    $.get(`/empleado/${id}`, function(data) {
+    // Corregir la URL para que coincida con el blueprint admin
+    $.get(`/admin/empleado/${id}`, function(data) {
         $('#editar-id').val(id);
         $('#editar-nombre').val(data.nombre);
         $('#editar-username').val(data.username);
@@ -223,6 +227,8 @@ function editarEmpleado(id) {
         
         var modal = new bootstrap.Modal(document.getElementById('modalEditarEmpleado'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los datos del empleado: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
@@ -241,7 +247,7 @@ $('#formEditarEmpleado').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/empleado/${id}`,
+        url: `/admin/empleado/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
@@ -249,7 +255,7 @@ $('#formEditarEmpleado').on('submit', function(e) {
             location.reload();
         },
         error: function(xhr) {
-            alert('Error al actualizar el empleado: ' + xhr.responseJSON.error);
+            alert('Error al actualizar el empleado: ' + (xhr.responseJSON?.error || 'Error desconocido'));
         }
     });
 });
@@ -257,16 +263,16 @@ $('#formEditarEmpleado').on('submit', function(e) {
 function eliminarEmpleado(id) {
     if (confirm('¿Está seguro de eliminar este empleado? Esta acción no se puede deshacer.')) {
         $.ajax({
-            url: `/empleado/${id}`,
+            url: `/admin/empleado/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('Error al eliminar el empleado: ' + xhr.responseJSON.error);
+                alert('Error al eliminar el empleado: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

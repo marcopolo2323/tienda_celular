@@ -244,41 +244,47 @@
 {% block scripts %}
 <script>
 function verDetalles(id) {
-    $.get(`/servicio_tv/${id}`, function(data) {
+    // Corregir la URL para que coincida con el blueprint productos
+    $.get(`/productos/servicio_tv/${id}`, function(data) {
         $('#detalle-nombre').text(data.nombre);
         $('#detalle-proveedor').text(data.proveedor);
         $('#detalle-precio').text(data.precio_mensual.toFixed(2));
         $('#detalle-canales').text(data.canales);
-        $('#detalle-descripcion').text(data.descripcion);
+        $('#detalle-descripcion').text(data.descripcion || 'Sin descripción');
         
         // Características
-        $('#detalle-hd').prop('checked', data.caracteristicas.hd);
-        $('#detalle-internet').prop('checked', data.caracteristicas.internet);
-        $('#detalle-deportes').prop('checked', data.caracteristicas.deportes);
-        $('#detalle-peliculas').prop('checked', data.caracteristicas.peliculas);
+        $('#detalle-hd').prop('checked', data.caracteristicas ? data.caracteristicas.hd : false);
+        $('#detalle-internet').prop('checked', data.caracteristicas ? data.caracteristicas.internet : false);
+        $('#detalle-deportes').prop('checked', data.caracteristicas ? data.caracteristicas.deportes : false);
+        $('#detalle-peliculas').prop('checked', data.caracteristicas ? data.caracteristicas.peliculas : false);
         
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los detalles del servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
 function editarServicioTV(id) {
-    $.get(`/servicio_tv/${id}`, function(data) {
+    // Corregir la URL para que coincida con el blueprint productos
+    $.get(`/productos/servicio_tv/${id}`, function(data) {
         $('#editar-id').val(id);
         $('#editar-nombre').val(data.nombre);
         $('#editar-proveedor').val(data.proveedor);
         $('#editar-precio').val(data.precio_mensual);
         $('#editar-canales').val(data.canales);
-        $('#editar-descripcion').val(data.descripcion);
+        $('#editar-descripcion').val(data.descripcion || '');
         
         // Características
-        $('#editar-hd').prop('checked', data.caracteristicas.hd);
-        $('#editar-internet').prop('checked', data.caracteristicas.internet);
-        $('#editar-deportes').prop('checked', data.caracteristicas.deportes);
-        $('#editar-peliculas').prop('checked', data.caracteristicas.peliculas);
+        $('#editar-hd').prop('checked', data.caracteristicas ? data.caracteristicas.hd : false);
+        $('#editar-internet').prop('checked', data.caracteristicas ? data.caracteristicas.internet : false);
+        $('#editar-deportes').prop('checked', data.caracteristicas ? data.caracteristicas.deportes : false);
+        $('#editar-peliculas').prop('checked', data.caracteristicas ? data.caracteristicas.peliculas : false);
         
         var modal = new bootstrap.Modal(document.getElementById('modalEditarServicioTV'));
         modal.show();
+    }).fail(function(xhr) {
+        alert('Error al obtener los datos del servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
     });
 }
 
@@ -301,7 +307,7 @@ $('#formEditarServicioTV').on('submit', function(e) {
     };
     
     $.ajax({
-        url: `/servicio_tv/${id}`,
+        url: `/productos/servicio_tv/${id}`,
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(data),
@@ -309,7 +315,7 @@ $('#formEditarServicioTV').on('submit', function(e) {
             location.reload();
         },
         error: function(xhr) {
-            alert('Error al actualizar el servicio: ' + xhr.responseJSON.error);
+            alert('Error al actualizar el servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
         }
     });
 });
@@ -317,13 +323,13 @@ $('#formEditarServicioTV').on('submit', function(e) {
 function eliminarServicioTV(id) {
     if (confirm('¿Está seguro de eliminar este servicio?')) {
         $.ajax({
-            url: `/servicio_tv/${id}`,
+            url: `/productos/servicio_tv/${id}`,
             type: 'DELETE',
             success: function(result) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('Error al eliminar el servicio: ' + xhr.responseJSON.error);
+                alert('Error al eliminar el servicio: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
     }
