@@ -53,7 +53,7 @@ def detalles_venta(id):
         response_data = {
             'cliente_nombre': venta.cliente_nombre or 'No especificado',
             'cliente_telefono': venta.cliente_telefono or 'No especificado',
-            'cliente_email': None,  # Este campo no existe en el modelo, siempre será None
+            'cliente_email': 'No disponible',  # Este campo no existe en el modelo
             'fecha_venta': venta.fecha_venta.isoformat() if venta.fecha_venta else None,
             'vendedor_nombre': venta.vendedor.nombre if venta.vendedor else 'No especificado',
             'metodo_pago': venta.metodo_pago or 'No especificado',

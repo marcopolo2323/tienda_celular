@@ -83,12 +83,57 @@ def celulares():
         
         return redirect(url_for('productos.celulares'))
     
-    celulares = Celular.query.join(Marca).order_by(Marca.nombre, Celular.modelo).all()
+    # Obtener parámetros de filtro
+    marca_id = request.args.get('marca_id', type=int)
+    estado = request.args.get('estado', '')
+    stock_min = request.args.get('stock_min', type=int)
+    precio_min = request.args.get('precio_min', type=float)
+    precio_max = request.args.get('precio_max', type=float)
+    busqueda = request.args.get('busqueda', '')
+    
+    # Construir consulta base
+    query = Celular.query.join(Marca)
+    
+    # Aplicar filtros
+    if marca_id:
+        query = query.filter(Celular.marca_id == marca_id)
+    if estado:
+        query = query.filter(Celular.estado == estado)
+    if stock_min is not None:
+        query = query.filter(Celular.stock >= stock_min)
+    if precio_min is not None:
+        query = query.filter(Celular.precio >= precio_min)
+    if precio_max is not None:
+        query = query.filter(Celular.precio <= precio_max)
+    if busqueda:
+        query = query.filter(
+            (Celular.modelo.contains(busqueda)) |
+            (Marca.nombre.contains(busqueda)) |
+            (Celular.descripcion.contains(busqueda))
+        )
+    
+    celulares = query.order_by(Marca.nombre, Celular.modelo).all()
     marcas = Marca.query.order_by(Marca.nombre).all()
+    
+    # Estadísticas
+    total_celulares = Celular.query.count()
+    total_stock = db.session.query(db.func.sum(Celular.stock)).scalar() or 0
+    valor_inventario = db.session.query(db.func.sum(Celular.precio * Celular.stock)).scalar() or 0
     
     return render_template('celulares.html',
                          celulares=celulares,
-                         marcas=marcas)
+                         marcas=marcas,
+                         total_celulares=total_celulares,
+                         total_stock=total_stock,
+                         valor_inventario=valor_inventario,
+                         filtros={
+                             'marca_id': marca_id,
+                             'estado': estado,
+                             'stock_min': stock_min,
+                             'precio_min': precio_min,
+                             'precio_max': precio_max,
+                             'busqueda': busqueda
+                         })
 
 @productos_bp.route('/accesorios', methods=['GET', 'POST'])
 @login_required
@@ -128,14 +173,61 @@ def accesorios():
         
         return redirect(url_for('productos.accesorios'))
     
-    accesorios = Accesorio.query.join(Marca).join(Categoria).order_by(Categoria.nombre, Accesorio.nombre).all()
+    # Obtener parámetros de filtro
+    marca_id = request.args.get('marca_id', type=int)
+    categoria_id = request.args.get('categoria_id', type=int)
+    stock_min = request.args.get('stock_min', type=int)
+    precio_min = request.args.get('precio_min', type=float)
+    precio_max = request.args.get('precio_max', type=float)
+    busqueda = request.args.get('busqueda', '')
+    
+    # Construir consulta base
+    query = Accesorio.query.join(Marca).join(Categoria)
+    
+    # Aplicar filtros
+    if marca_id:
+        query = query.filter(Accesorio.marca_id == marca_id)
+    if categoria_id:
+        query = query.filter(Accesorio.categoria_id == categoria_id)
+    if stock_min is not None:
+        query = query.filter(Accesorio.stock >= stock_min)
+    if precio_min is not None:
+        query = query.filter(Accesorio.precio >= precio_min)
+    if precio_max is not None:
+        query = query.filter(Accesorio.precio <= precio_max)
+    if busqueda:
+        query = query.filter(
+            (Accesorio.nombre.contains(busqueda)) |
+            (Marca.nombre.contains(busqueda)) |
+            (Categoria.nombre.contains(busqueda)) |
+            (Accesorio.descripcion.contains(busqueda)) |
+            (Accesorio.codigo_producto.contains(busqueda))
+        )
+    
+    accesorios = query.order_by(Categoria.nombre, Accesorio.nombre).all()
     marcas = Marca.query.order_by(Marca.nombre).all()
     categorias = Categoria.query.order_by(Categoria.nombre).all()
+    
+    # Estadísticas
+    total_accesorios = Accesorio.query.count()
+    total_stock = db.session.query(db.func.sum(Accesorio.stock)).scalar() or 0
+    valor_inventario = db.session.query(db.func.sum(Accesorio.precio * Accesorio.stock)).scalar() or 0
     
     return render_template('accesorios.html', 
                          accesorios=accesorios, 
                          marcas=marcas,
-                         categorias=categorias)
+                         categorias=categorias,
+                         total_accesorios=total_accesorios,
+                         total_stock=total_stock,
+                         valor_inventario=valor_inventario,
+                         filtros={
+                             'marca_id': marca_id,
+                             'categoria_id': categoria_id,
+                             'stock_min': stock_min,
+                             'precio_min': precio_min,
+                             'precio_max': precio_max,
+                             'busqueda': busqueda
+                         })
 
 @productos_bp.route('/servicios-tv', methods=['GET', 'POST'])
 @login_required
@@ -372,3 +464,126 @@ def eliminar_servicio_tv(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+# Rutas para estadísticas y reportes
+@productos_bp.route('/estadisticas')
+@login_required
+def estadisticas():
+    """Página de estadísticas de productos"""
+    if not has_permission('view_reports'):
+        flash('No tienes permisos para ver estadísticas', 'error')
+        return redirect(url_for('main.index'))
+    
+    # Estadísticas de celulares
+    celulares_por_marca = db.session.query(
+        Marca.nombre, 
+        db.func.count(Celular.id).label('cantidad'),
+        db.func.sum(Celular.stock).label('stock_total'),
+        db.func.sum(Celular.precio * Celular.stock).label('valor_total')
+    ).join(Celular).group_by(Marca.id, Marca.nombre).all()
+    
+    # Estadísticas de accesorios
+    accesorios_por_categoria = db.session.query(
+        Categoria.nombre,
+        db.func.count(Accesorio.id).label('cantidad'),
+        db.func.sum(Accesorio.stock).label('stock_total'),
+        db.func.sum(Accesorio.precio * Accesorio.stock).label('valor_total')
+    ).join(Accesorio).group_by(Categoria.id, Categoria.nombre).all()
+    
+    # Productos con bajo stock
+    celulares_bajo_stock = Celular.query.filter(Celular.stock < 5).all()
+    accesorios_bajo_stock = Accesorio.query.filter(Accesorio.stock < 10).all()
+    
+    # Totales generales
+    total_celulares = Celular.query.count()
+    total_accesorios = Accesorio.query.count()
+    valor_total_inventario = (
+        db.session.query(db.func.sum(Celular.precio * Celular.stock)).scalar() or 0 +
+        db.session.query(db.func.sum(Accesorio.precio * Accesorio.stock)).scalar() or 0
+    )
+    
+    # Obtener marcas y categorías para el JavaScript
+    marcas = Marca.query.order_by(Marca.nombre).all()
+    categorias = Categoria.query.order_by(Categoria.nombre).all()
+    
+    return render_template('estadisticas_productos.html',
+                         celulares_por_marca=celulares_por_marca,
+                         accesorios_por_categoria=accesorios_por_categoria,
+                         celulares_bajo_stock=celulares_bajo_stock,
+                         accesorios_bajo_stock=accesorios_bajo_stock,
+                         total_celulares=total_celulares,
+                         total_accesorios=total_accesorios,
+                         valor_total_inventario=valor_total_inventario,
+                         marcas=marcas,
+                         categorias=categorias)
+
+@productos_bp.route('/api/estadisticas-marca/<int:marca_id>')
+@login_required
+def estadisticas_marca(marca_id):
+    """API para obtener estadísticas de una marca específica"""
+    if not has_permission('view_reports'):
+        return jsonify({'error': 'No tienes permisos'}), 403
+    
+    marca = Marca.query.get_or_404(marca_id)
+    
+    # Celulares de esta marca
+    celulares = Celular.query.filter_by(marca_id=marca_id).all()
+    total_celulares = len(celulares)
+    stock_celulares = sum(c.stock for c in celulares)
+    valor_celulares = sum(c.precio * c.stock for c in celulares)
+    
+    # Accesorios de esta marca
+    accesorios = Accesorio.query.filter_by(marca_id=marca_id).all()
+    total_accesorios = len(accesorios)
+    stock_accesorios = sum(a.stock for a in accesorios)
+    valor_accesorios = sum(a.precio * a.stock for a in accesorios)
+    
+    return jsonify({
+        'marca': marca.nombre,
+        'celulares': {
+            'total': total_celulares,
+            'stock': stock_celulares,
+            'valor': float(valor_celulares)
+        },
+        'accesorios': {
+            'total': total_accesorios,
+            'stock': stock_accesorios,
+            'valor': float(valor_accesorios)
+        },
+        'total_productos': total_celulares + total_accesorios,
+        'valor_total': float(valor_celulares + valor_accesorios)
+    })
+
+@productos_bp.route('/api/estadisticas-categoria/<int:categoria_id>')
+@login_required
+def estadisticas_categoria(categoria_id):
+    """API para obtener estadísticas de una categoría específica"""
+    if not has_permission('view_reports'):
+        return jsonify({'error': 'No tienes permisos'}), 403
+    
+    categoria = Categoria.query.get_or_404(categoria_id)
+    
+    # Accesorios de esta categoría
+    accesorios = Accesorio.query.filter_by(categoria_id=categoria_id).all()
+    total_accesorios = len(accesorios)
+    stock_total = sum(a.stock for a in accesorios)
+    valor_total = sum(a.precio * a.stock for a in accesorios)
+    
+    # Agrupar por marca
+    marcas_stats = {}
+    for accesorio in accesorios:
+        marca_nombre = accesorio.marca.nombre
+        if marca_nombre not in marcas_stats:
+            marcas_stats[marca_nombre] = {'cantidad': 0, 'stock': 0, 'valor': 0}
+        marcas_stats[marca_nombre]['cantidad'] += 1
+        marcas_stats[marca_nombre]['stock'] += accesorio.stock
+        marcas_stats[marca_nombre]['valor'] += accesorio.precio * accesorio.stock
+    
+    return jsonify({
+        'categoria': categoria.nombre,
+        'descripcion': categoria.descripcion,
+        'total_accesorios': total_accesorios,
+        'stock_total': stock_total,
+        'valor_total': float(valor_total),
+        'por_marca': marcas_stats
+    })

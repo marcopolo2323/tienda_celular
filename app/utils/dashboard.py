@@ -6,8 +6,13 @@ def get_dashboard_stats():
     """Obtiene estadísticas para el dashboard"""
     
     # Contadores básicos
-    celulares_count = Celular.query.count()
-    accesorios_count = Accesorio.query.count()
+    try:
+        celulares_count = Celular.query.count()
+        accesorios_count = Accesorio.query.count()
+    except Exception as e:
+        # Solución temporal si hay problemas con la base de datos
+        celulares_count = 0
+        accesorios_count = 0
     
     # Ventas de hoy
     today = date.today()
@@ -31,11 +36,18 @@ def get_dashboard_stats():
         total_ventas_hoy = 0
     
     # Productos con bajo stock
-    celulares_bajo_stock = Celular.query.filter(Celular.stock < 5).all()
-    accesorios_bajo_stock = Accesorio.query.filter(Accesorio.stock < 10).all()
+    try:
+        celulares_bajo_stock = Celular.query.filter(Celular.stock < 5).all()
+        accesorios_bajo_stock = Accesorio.query.filter(Accesorio.stock < 10).all()
+    except Exception as e:
+        celulares_bajo_stock = []
+        accesorios_bajo_stock = []
     
     # Servicios pendientes
-    servicios_pendientes = Servicio.query.filter_by(estado='pendiente').all()
+    try:
+        servicios_pendientes = Servicio.query.filter_by(estado='pendiente').all()
+    except Exception as e:
+        servicios_pendientes = []
     
     # Estadísticas adicionales
     ventas_mes = get_monthly_sales()

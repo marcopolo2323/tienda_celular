@@ -62,7 +62,7 @@
             <ul class="pagination justify-content-center">
                 {% if ventas.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('ventas.historial', page=ventas.prev_num) }}">Anterior</a>
+                        <a class="page-link" href="{{ url_for('ventas.lista_ventas', page=ventas.prev_num) }}">Anterior</a>
                     </li>
                 {% endif %}
                 
@@ -70,7 +70,7 @@
                     {% if page_num %}
                         {% if page_num != ventas.page %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('ventas.historial', page=page_num) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for('ventas.lista_ventas', page=page_num) }}">{{ page_num }}</a>
                             </li>
                         {% else %}
                             <li class="page-item active">
@@ -86,7 +86,7 @@
                 
                 {% if ventas.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('ventas.historial', page=ventas.next_num) }}">Siguiente</a>
+                        <a class="page-link" href="{{ url_for('ventas.lista_ventas', page=ventas.next_num) }}">Siguiente</a>
                     </li>
                 {% endif %}
             </ul>
@@ -162,7 +162,7 @@ function verDetalles(id) {
             
             // Información de la venta
             $('#venta-fecha').text(data.fecha_venta ? new Date(data.fecha_venta).toLocaleString() : 'No especificada');
-            $('#venta-vendedor').text((data.vendedor && data.vendedor.nombre) || 'No especificado');
+            $('#venta-vendedor').text(data.vendedor_nombre || 'No especificado');
             $('#venta-metodo').text(data.metodo_pago ? data.metodo_pago.charAt(0).toUpperCase() + data.metodo_pago.slice(1) : 'No especificado');
             $('#venta-estado').text(data.estado ? data.estado.charAt(0).toUpperCase() + data.estado.slice(1) : 'No especificado');
             

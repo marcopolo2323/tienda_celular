@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-chart-bar"></i> Estadísticas de Productos</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('productos.celulares') }}" class="btn btn-primary">
+            <i class="fas fa-mobile-alt"></i> Celulares
+        </a>
+        <a href="{{ url_for('productos.accesorios') }}" class="btn btn-info">
+            <i class="fas fa-headphones"></i> Accesorios
+        </a>
+    </div>
+</div>
+
+<!-- Resumen General -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Celulares</h5>
+                <h2 class="card-text">{{ total_celulares }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Accesorios</h5>
+                <h2 class="card-text">{{ total_accesorios }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Productos</h5>
+                <h2 class="card-text">{{ total_celulares + total_accesorios }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Valor Total Inventario</h5>
+                <h2 class="card-text">${{ "%.2f"|format(valor_total_inventario) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Estadísticas por Marca -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-tags"></i> Celulares por Marca</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Marca</th>
+                                <th>Cantidad</th>
+                                <th>Stock</th>
+                                <th>Valor</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for marca in celulares_por_marca %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">{{ marca.nombre }}</span>
+                                </td>
+                                <td>{{ marca.cantidad }}</td>
+                                <td>{{ marca.stock_total or 0 }}</td>
+                                <td>${{ "%.2f"|format(marca.valor_total or 0) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="verDetallesMarca('{{ marca.nombre }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas por Categoría -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-folder"></i> Accesorios por Categoría</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Cantidad</th>
+                                <th>Stock</th>
+                                <th>Valor</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for categoria in accesorios_por_categoria %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-info">{{ categoria.nombre }}</span>
+                                </td>
+                                <td>{{ categoria.cantidad }}</td>
+                                <td>{{ categoria.stock_total or 0 }}</td>
+                                <td>${{ "%.2f"|format(categoria.valor_total or 0) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="verDetallesCategoria('{{ categoria.nombre }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Productos con Bajo Stock -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle text-warning"></i> Celulares con Bajo Stock</h5>
+            </div>
+            <div class="card-body">
+                {% if celulares_bajo_stock %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>Stock</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for celular in celulares_bajo_stock %}
+                            <tr>
+                                <td>{{ celular.marca.nombre }}</td>
+                                <td>{{ celular.modelo }}</td>
+                                <td>
+                                    <span class="badge {% if celular.stock < 2 %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ celular.stock }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('productos.celulares', stock_min=0, stock_max=4) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p class="text-muted">Todos los celulares tienen stock suficiente</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle text-warning"></i> Accesorios con Bajo Stock</h5>
+            </div>
+            <div class="card-body">
+                {% if accesorios_bajo_stock %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Stock</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for accesorio in accesorios_bajo_stock %}
+                            <tr>
+                                <td>{{ accesorio.nombre }}</td>
+                                <td>{{ accesorio.categoria.nombre }}</td>
+                                <td>
+                                    <span class="badge {% if accesorio.stock < 5 %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ accesorio.stock }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('productos.accesorios', stock_min=0, stock_max=9) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p class="text-muted">Todos los accesorios tienen stock suficiente</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles Marca -->
+<div class="modal fade" id="detallesMarcaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Marca</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detallesMarcaContent">
+                <!-- Contenido cargado dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles Categoría -->
+<div class="modal fade" id="detallesCategoriaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detallesCategoriaContent">
+                <!-- Contenido cargado dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let detallesMarcaModal;
+let detallesCategoriaModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    detallesMarcaModal = new bootstrap.Modal(document.getElementById('detallesMarcaModal'));
+    detallesCategoriaModal = new bootstrap.Modal(document.getElementById('detallesCategoriaModal'));
+});
+
+async function verDetallesMarca(nombreMarca) {
+    try {
+        // Buscar el ID de la marca por nombre
+        const marcas = {{ marcas|map(attribute='nombre')|list|tojson }};
+        const marcaIds = {{ marcas|map(attribute='id')|list|tojson }};
+        const marcaIndex = marcas.indexOf(nombreMarca);
+        
+        if (marcaIndex === -1) {
+            alert('Marca no encontrada');
+            return;
+        }
+        
+        const marcaId = marcaIds[marcaIndex];
+        
+        const response = await fetch(`/productos/api/estadisticas-marca/${marcaId}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Información General</h6>
+                        <p><strong>Marca:</strong> ${data.marca}</p>
+                        <p><strong>Total Productos:</strong> ${data.total_productos}</p>
+                        <p><strong>Valor Total:</strong> $${data.valor_total.toFixed(2)}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Desglose por Tipo</h6>
+                        <p><strong>Celulares:</strong> ${data.celulares.total} unidades (Stock: ${data.celulares.stock}, Valor: $${data.celulares.valor.toFixed(2)})</p>
+                        <p><strong>Accesorios:</strong> ${data.accesorios.total} unidades (Stock: ${data.accesorios.stock}, Valor: $${data.accesorios.valor.toFixed(2)})</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detallesMarcaContent').innerHTML = content;
+            detallesMarcaModal.show();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar los detalles de la marca');
+    }
+}
+
+async function verDetallesCategoria(nombreCategoria) {
+    try {
+        // Buscar el ID de la categoría por nombre
+        const categorias = {{ categorias|map(attribute='nombre')|list|tojson }};
+        const categoriaIds = {{ categorias|map(attribute='id')|list|tojson }};
+        const categoriaIndex = categorias.indexOf(nombreCategoria);
+        
+        if (categoriaIndex === -1) {
+            alert('Categoría no encontrada');
+            return;
+        }
+        
+        const categoriaId = categoriaIds[categoriaIndex];
+        
+        const response = await fetch(`/productos/api/estadisticas-categoria/${categoriaId}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            let marcasContent = '';
+            for (const [marca, stats] of Object.entries(data.por_marca)) {
+                marcasContent += `
+                    <tr>
+                        <td>${marca}</td>
+                        <td>${stats.cantidad}</td>
+                        <td>${stats.stock}</td>
+                        <td>$${stats.valor.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+            
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Información General</h6>
+                        <p><strong>Categoría:</strong> ${data.categoria}</p>
+                        <p><strong>Descripción:</strong> ${data.descripcion || 'Sin descripción'}</p>
+                        <p><strong>Total Accesorios:</strong> ${data.total_accesorios}</p>
+                        <p><strong>Stock Total:</strong> ${data.stock_total}</p>
+                        <p><strong>Valor Total:</strong> $${data.valor_total.toFixed(2)}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Desglose por Marca</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Marca</th>
+                                        <th>Cantidad</th>
+                                        <th>Stock</th>
+                                        <th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${marcasContent}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detallesCategoriaContent').innerHTML = content;
+            detallesCategoriaModal.show();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar los detalles de la categoría');
+    }
+}
+</script>
+{% endblock %}

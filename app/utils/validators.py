@@ -142,9 +142,9 @@ def validate_sale_data(data):
     if not data.get('cliente_nombre'):
         errors.append('El nombre del cliente es obligatorio')
     
-    if not data.get('cliente_telefono'):
-        errors.append('El teléfono del cliente es obligatorio')
-    elif not validate_phone(data['cliente_telefono']):
+    # El teléfono no es obligatorio para las ventas
+    telefono = data.get('cliente_telefono', '').strip()
+    if telefono and not validate_phone(telefono):
         errors.append('El formato del teléfono no es válido')
     
     if not data.get('metodo_pago'):
@@ -152,7 +152,8 @@ def validate_sale_data(data):
     elif data['metodo_pago'] not in ['efectivo', 'tarjeta', 'transferencia', 'credito']:
         errors.append('Método de pago no válido')
     
-    # Validar email si se proporciona
+    # El email no es obligatorio para las ventas
+    # Si se proporciona, validar formato
     email = data.get('cliente_email', '').strip()
     if email and not validate_email(email):
         errors.append('El formato del email no es válido')

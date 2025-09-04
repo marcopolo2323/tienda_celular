@@ -9,7 +9,6 @@ def process_sale(form_data, vendedor_id):
             vendedor_id=vendedor_id,
             cliente_nombre=form_data['cliente_nombre'],
             cliente_telefono=form_data['cliente_telefono'],
-            cliente_email=form_data.get('cliente_email', ''),
             metodo_pago=form_data['metodo_pago']
         )
         db.session.add(venta)
@@ -142,7 +141,7 @@ def cancel_sale(venta_id):
                         producto.stock += detalle.cantidad
             
             venta.estado = 'cancelada'
-            venta.fecha_cancelacion = datetime.utcnow()
+            # El campo fecha_cancelacion no existe en el modelo, no lo usamos
             db.session.commit()
             
             return {'success': True, 'message': 'Venta cancelada exitosamente'}
